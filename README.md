@@ -12,12 +12,27 @@ App Flutter para estudiantes universitarios. La primera version trae una calcula
 
 ## Modulos propuestos
 
-- Calculadora de notas por cortes y simulador de promedio.
-- Agenda academica para clases, parciales y entregas.
-- Tareas y proyectos por materia con prioridad y fecha limite.
-- Materias con creditos, docente, salon y horario.
-- Recursos de estudio: apuntes, enlaces, documentos y recordatorios.
-- Panel de progreso para ver riesgos academicos antes de final de semestre.
+- Calculadora de notas.
+- Promedio acumulado.
+- Horario de clases.
+- Recordatorios de tareas.
+- Control de parciales.
+- Lista de materias.
+- Notas por semestre.
+- Calculadora de cuanto necesito para pasar.
+- Gastos universitarios.
+- Agenda de estudio.
+- Modo semana de parciales.
+
+## Pantalla principal
+
+El tablero inicial se organiza en tarjetas:
+
+- Calcular notas.
+- Horario.
+- Tareas.
+- Gastos.
+- Metas academicas.
 
 ## Comandos utiles
 
@@ -26,3 +41,14 @@ flutter pub get
 flutter analyze
 flutter test
 ```
+
+## Comandos que conviene saber
+
+- `flutter pub get`: instala o actualiza las dependencias del proyecto.
+- `flutter analyze`: revisa errores y malas practicas sin ejecutar la app.
+- `flutter test`: corre las pruebas automatizadas.
+- `flutter run`: abre la app en un emulador, celular o navegador conectado.
+- `flutter clean`: limpia archivos generados cuando el proyecto se pone raro.
+- `dart format lib test`: ordena el formato del codigo.
+- `git status --short`: muestra que archivos cambiaste.
+- `git diff`: muestra exactamente que cambio en el codigo.

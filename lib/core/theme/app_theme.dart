@@ -15,7 +15,7 @@ class AppTheme {
       scaffoldBackgroundColor: const Color(0xFFF7F9FA),
       appBarTheme: AppBarTheme(
         centerTitle: false,
-        backgroundColor: colorScheme.surface,
+        backgroundColor: const Color(0xFFF7F9FA),
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
       ),
@@ -32,6 +32,18 @@ class AppTheme {
         filled: true,
         fillColor: colorScheme.surface,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
       ),
     );
   }

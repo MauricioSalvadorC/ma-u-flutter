@@ -38,9 +38,9 @@ void main() {
     await tester.pumpWidget(const UniversityCompanionApp());
 
     expect(find.text('MA U'), findsOneWidget);
-    expect(find.text('Calculadora de notas'), findsOneWidget);
+    expect(find.text('Calcular notas'), findsOneWidget);
 
-    await tester.tap(find.text('Calculadora de notas'));
+    await tester.tap(find.text('Calcular notas'));
     await tester.pumpAndSettle();
 
     expect(find.text('Sistema 30% / 30% / 40%'), findsOneWidget);
