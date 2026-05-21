@@ -1,30 +1,49 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:calculo_nota_flutter/app/app.dart';
+import 'package:calculo_nota_flutter/features/grades/domain/grade_calculator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:calculo_nota_flutter/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('GradeCalculator', () {
+    const calculator = GradeCalculator();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('calculates final grade with 30, 30 and 40 percent weights', () {
+      final result = calculator.finalGrade(
+        firstTerm: 4,
+        secondTerm: 3.5,
+        thirdTerm: 4.2,
+      );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+      expect(result, closeTo(3.93, 0.001));
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('calculates required third term grade', () {
+      final result = calculator.requiredThirdTerm(
+        firstTerm: 3,
+        secondTerm: 3,
+        desiredFinalGrade: 3.5,
+      );
+
+      expect(result, closeTo(4.25, 0.001));
+    });
+
+    test('parses comma decimals and rejects invalid grades', () {
+      expect(calculator.parseGrade('4,5'), 4.5);
+      expect(calculator.parseGrade('-1'), isNull);
+      expect(calculator.parseGrade('5.1'), isNull);
+      expect(calculator.parseGrade('abc'), isNull);
+    });
+  });
+
+  testWidgets('opens the grade calculator from dashboard', (tester) async {
+    await tester.pumpWidget(const UniversityCompanionApp());
+
+    expect(find.text('MA U'), findsOneWidget);
+    expect(find.text('Calculadora de notas'), findsOneWidget);
+
+    await tester.tap(find.text('Calculadora de notas'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sistema 30% / 30% / 40%'), findsOneWidget);
+    expect(find.text('Calcular nota necesaria'), findsOneWidget);
   });
 }

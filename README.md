@@ -1,17 +1,28 @@
-# calculo_nota_flutter
+# MA U
 
-A new Flutter project.
+App Flutter para estudiantes universitarios. La primera version trae una calculadora de notas, pero el proyecto queda preparado para crecer como asistente academico.
 
-## Getting Started
+## Arquitectura inicial
 
-This project is a starting point for a Flutter application.
+- `lib/main.dart`: punto de entrada.
+- `lib/app`: configuracion principal de la app.
+- `lib/core`: piezas compartidas, como tema visual.
+- `lib/features`: modulos funcionales separados por dominio.
+- `test`: pruebas de logica y comportamiento visible.
 
-A few resources to get you started if this is your first Flutter project:
+## Modulos propuestos
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- Calculadora de notas por cortes y simulador de promedio.
+- Agenda academica para clases, parciales y entregas.
+- Tareas y proyectos por materia con prioridad y fecha limite.
+- Materias con creditos, docente, salon y horario.
+- Recursos de estudio: apuntes, enlaces, documentos y recordatorios.
+- Panel de progreso para ver riesgos academicos antes de final de semestre.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Comandos utiles
+
+```bash
+flutter pub get
+flutter analyze
+flutter test
+```
