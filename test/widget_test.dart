@@ -37,7 +37,7 @@ void main() {
   testWidgets('opens the grade calculator from dashboard', (tester) async {
     await tester.pumpWidget(const UniversityCompanionApp());
 
-    expect(find.text('MA-U'), findsOneWidget);
+    expect(find.text('Ma-U'), findsOneWidget);
     expect(find.text('Calcular notas'), findsOneWidget);
 
     await tester.tap(find.text('Calcular notas'));

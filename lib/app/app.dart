@@ -28,7 +28,7 @@ class _UniversityCompanionAppState extends State<UniversityCompanionApp> {
         return AppSettingsScope(
           controller: _settingsController,
           child: MaterialApp(
-            title: 'MA-U',
+            title: 'Ma-U',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light(_settingsController.seedColor),
             darkTheme: AppTheme.dark(_settingsController.seedColor),

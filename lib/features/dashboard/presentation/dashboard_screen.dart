@@ -155,7 +155,7 @@ class _StatusHeader extends StatelessWidget {
                   child: const Padding(
                     padding: EdgeInsets.all(6),
                     child: Image(
-                      image: AssetImage('assets/logo/ma_u_logo.png'),
+                      image: AssetImage('assets/logo/ma_u_logo_5.png'),
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -197,14 +197,14 @@ class _AppTitle extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
           child: Image.asset(
-            'assets/logo/ma_u_logo.png',
+            'assets/logo/ma_u_logo_3.png',
             width: 30,
             height: 30,
             fit: BoxFit.contain,
           ),
         ),
         const SizedBox(width: 10),
-        const Text('MA-U'),
+        const Text('Ma-U'),
       ],
     );
   }

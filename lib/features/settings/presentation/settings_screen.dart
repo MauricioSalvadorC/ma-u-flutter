@@ -23,7 +23,7 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Ajusta el modo visual y el color principal de MA-U.',
+              'Ajusta el modo visual y el color principal de Ma-U.',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 20),
@@ -72,7 +72,7 @@ class _ColorPreview extends StatelessWidget {
               child: const Padding(
                 padding: EdgeInsets.all(5),
                 child: Image(
-                  image: AssetImage('assets/logo/ma_u_logo.png'),
+                  image: AssetImage('assets/logo/ma_u_logo_5.png'),
                   fit: BoxFit.contain,
                 ),
               ),
