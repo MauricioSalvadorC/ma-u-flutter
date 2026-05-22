@@ -1,8 +1,22 @@
 import 'package:calculo_nota_flutter/app/app.dart';
+import 'package:calculo_nota_flutter/data/database/app_database.dart';
+import 'package:calculo_nota_flutter/data/database/app_database_provider.dart';
 import 'package:calculo_nota_flutter/features/grades/domain/grade_calculator.dart';
+import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  setUp(() {
+    AppDatabaseProvider.overrideForTesting(
+      AppDatabase(NativeDatabase.memory()),
+    );
+  });
+
+  tearDown(() async {
+    await AppDatabaseProvider.resetForTesting();
+  });
+
   group('GradeCalculator', () {
     const calculator = GradeCalculator();
 
@@ -56,5 +70,48 @@ void main() {
     expect(find.text('Configuracion'), findsOneWidget);
     expect(find.text('Modo'), findsOneWidget);
     expect(find.text('Paleta de colores'), findsOneWidget);
+  });
+
+  testWidgets('opens academic planner from dashboard', (tester) async {
+    await tester.pumpWidget(const UniversityCompanionApp());
+
+    await tester.tap(find.text('Horario'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Centro academico'), findsOneWidget);
+    expect(find.text('Semana organizada'), findsOneWidget);
+    expect(find.text('Calculo diferencial'), findsWidgets);
+  });
+
+  testWidgets('creates a subject in academic planner', (tester) async {
+    await tester.pumpWidget(const UniversityCompanionApp());
+
+    await tester.tap(find.text('Horario'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Materias'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Etica');
+    await tester.enterText(find.byType(TextFormField).at(1), 'Ana Ruiz');
+    await tester.enterText(find.byType(TextFormField).at(2), 'D-210');
+    await tester.enterText(find.byType(TextFormField).at(3), '2');
+
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nueva materia'), findsNothing);
+    expect(find.text('5'), findsOneWidget);
+  });
+
+  testWidgets('opens tasks from dashboard', (tester) async {
+    await tester.pumpWidget(const UniversityCompanionApp());
+
+    await tester.tap(find.text('Tareas'));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Tareas'), findsWidgets);
+    expect(find.text('Control de entregas'), findsOneWidget);
   });
 }

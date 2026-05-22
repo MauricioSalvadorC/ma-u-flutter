@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/settings/app_settings_controller.dart';
 import '../../grades/presentation/grade_calculator_screen.dart';
+import '../../schedule/presentation/academic_planner_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
+import '../../tasks/presentation/tasks_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -25,17 +27,29 @@ class DashboardScreen extends StatelessWidget {
           );
         },
       ),
-      const _DashboardModule(
+      _DashboardModule(
         icon: Icons.calendar_month_outlined,
         title: 'Horario',
         subtitle: 'Clases, salones, docentes y bloques de estudio.',
-        color: Color(0xFF2563EB),
+        color: const Color(0xFF2563EB),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const AcademicPlannerScreen(),
+            ),
+          );
+        },
       ),
-      const _DashboardModule(
+      _DashboardModule(
         icon: Icons.task_alt_outlined,
         title: 'Tareas',
         subtitle: 'Recordatorios, entregas y avance por materia.',
-        color: Color(0xFF7C3AED),
+        color: const Color(0xFF7C3AED),
+        onTap: () {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute<void>(builder: (_) => const TasksScreen()));
+        },
       ),
       const _DashboardModule(
         icon: Icons.account_balance_wallet_outlined,
