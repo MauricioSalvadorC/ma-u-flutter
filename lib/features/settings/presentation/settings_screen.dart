@@ -178,17 +178,24 @@ class _ColorPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                for (final option in AppPalette.colors)
-                  _ColorSwatchButton(
-                    option: option,
-                    isSelected: settings.seedColor == option.color,
-                    onTap: () => settings.setSeedColor(option.color),
-                  ),
-              ],
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: AppPalette.colors.length,
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 92,
+                mainAxisExtent: 84,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 12,
+              ),
+              itemBuilder: (context, index) {
+                final option = AppPalette.colors[index];
+                return _ColorSwatchButton(
+                  option: option,
+                  isSelected: settings.seedColor == option.color,
+                  onTap: () => settings.setSeedColor(option.color),
+                );
+              },
             ),
           ],
         ),
@@ -217,24 +224,54 @@ class _ColorSwatchButton extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: onTap,
-        child: Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [option.gradientStart, option.color, option.gradientEnd],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    option.gradientStart,
+                    option.color,
+                    option.gradientEnd,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isSelected
+                      ? colorScheme.onSurface
+                      : colorScheme.outlineVariant,
+                  width: isSelected ? 3 : 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: option.color.withAlpha(isSelected ? 72 : 24),
+                    blurRadius: isSelected ? 14 : 8,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check, color: Colors.white)
+                  : const SizedBox.shrink(),
             ),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected ? colorScheme.onSurface : Colors.transparent,
-              width: 3,
+            const SizedBox(height: 6),
+            Text(
+              option.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
-          child: isSelected
-              ? const Icon(Icons.check, color: Colors.white)
-              : const SizedBox.shrink(),
+          ],
         ),
       ),
     );
