@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/settings/app_settings_controller.dart';
 import '../../grades/presentation/grade_calculator_screen.dart';
+import '../../settings/presentation/settings_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final settings = AppSettingsScope.of(context);
+    final selectedColor = settings.selectedColor;
     final modules = [
       _DashboardModule(
         icon: Icons.calculate_outlined,
         title: 'Calcular notas',
         subtitle: 'Final, cortes y cuanto necesitas para pasar.',
-        color: const Color(0xFF0F766E),
+        color: selectedColor.color,
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -48,12 +52,25 @@ class DashboardScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('MA U')),
+      appBar: AppBar(
+        title: const _AppTitle(),
+        actions: [
+          IconButton(
+            tooltip: 'Configuracion',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+              );
+            },
+            icon: const Icon(Icons.tune_outlined),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
-            const _StatusHeader(),
+            _StatusHeader(colorOption: selectedColor),
             const SizedBox(height: 20),
             Text(
               'Modulos principales',
@@ -91,7 +108,9 @@ class DashboardScreen extends StatelessWidget {
 }
 
 class _StatusHeader extends StatelessWidget {
-  const _StatusHeader();
+  const _StatusHeader({required this.colorOption});
+
+  final AppColorOption colorOption;
 
   @override
   Widget build(BuildContext context) {
@@ -101,8 +120,12 @@ class _StatusHeader extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF062C30), Color(0xFF0F766E), Color(0xFFE0F2FE)],
+        gradient: LinearGradient(
+          colors: [
+            colorOption.gradientStart,
+            colorOption.color,
+            colorOption.gradientEnd,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -122,14 +145,20 @@ class _StatusHeader extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 54,
+                  height: 54,
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha(36),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.white.withAlpha(72)),
                   ),
-                  child: const Icon(Icons.school_outlined, color: Colors.white),
+                  child: const Padding(
+                    padding: EdgeInsets.all(6),
+                    child: Image(
+                      image: AssetImage('assets/logo/ma_u_logo.png'),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 const _StatusChip(label: 'Semana activa'),
@@ -153,6 +182,30 @@ class _StatusHeader extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AppTitle extends StatelessWidget {
+  const _AppTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Image.asset(
+            'assets/logo/ma_u_logo.png',
+            width: 30,
+            height: 30,
+            fit: BoxFit.contain,
+          ),
+        ),
+        const SizedBox(width: 10),
+        const Text('MA-U'),
+      ],
     );
   }
 }
@@ -220,7 +273,7 @@ class _ModuleCard extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: module.color.withAlpha(24),
+                  color: module.color.withAlpha(42),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(module.icon, color: module.color),

@@ -1,4 +1,4 @@
-# MA U
+# MA-U
 
 App Flutter para estudiantes universitarios. La primera version trae una calculadora de notas, pero el proyecto queda preparado para crecer como asistente academico.
 

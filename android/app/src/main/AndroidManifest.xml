@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="Ma-U V3"
+        android:label="Ma-U V4"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

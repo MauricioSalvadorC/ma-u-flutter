@@ -37,7 +37,7 @@ void main() {
   testWidgets('opens the grade calculator from dashboard', (tester) async {
     await tester.pumpWidget(const UniversityCompanionApp());
 
-    expect(find.text('MA U'), findsOneWidget);
+    expect(find.text('MA-U'), findsOneWidget);
     expect(find.text('Calcular notas'), findsOneWidget);
 
     await tester.tap(find.text('Calcular notas'));
@@ -45,5 +45,16 @@ void main() {
 
     expect(find.text('Sistema 30% / 30% / 40%'), findsOneWidget);
     expect(find.text('Calcular nota necesaria'), findsOneWidget);
+  });
+
+  testWidgets('opens settings from dashboard', (tester) async {
+    await tester.pumpWidget(const UniversityCompanionApp());
+
+    await tester.tap(find.byTooltip('Configuracion'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Configuracion'), findsOneWidget);
+    expect(find.text('Modo'), findsOneWidget);
+    expect(find.text('Paleta de colores'), findsOneWidget);
   });
 }
