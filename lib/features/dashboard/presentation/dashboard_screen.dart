@@ -7,6 +7,7 @@ import '../../../data/database/app_database_provider.dart';
 import '../../academic_goals/presentation/academic_goals_screen.dart';
 import '../../academic_record/presentation/academic_record_screen.dart';
 import '../../exam_week/presentation/exam_week_screen.dart';
+import '../../expenses/presentation/expenses_screen.dart';
 import '../../grades/presentation/grade_calculator_screen.dart';
 import '../../schedule/data/academic_seed_service.dart';
 import '../../schedule/data/schedule_repository.dart';
@@ -128,11 +129,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ).push(MaterialPageRoute<void>(builder: (_) => const TasksScreen()));
         },
       ),
-      const _DashboardModule(
+      _DashboardModule(
         icon: Icons.account_balance_wallet_outlined,
         title: 'Gastos',
         subtitle: 'Transporte, comida, copias y presupuesto mensual.',
-        color: Color(0xFFDC6B19),
+        color: const Color(0xFFDC6B19),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const ExpensesScreen()),
+          );
+        },
       ),
       _DashboardModule(
         icon: Icons.track_changes_outlined,

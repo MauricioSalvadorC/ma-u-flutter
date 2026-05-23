@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/formatters/app_date_formatter.dart';
+import '../../../core/formatters/money_formatter.dart';
 import '../../../data/database/app_database_provider.dart';
+import '../../expenses/data/expense_repository.dart';
+import '../../expenses/domain/university_expense.dart';
 import '../../schedule/data/academic_seed_service.dart';
 import '../../schedule/data/schedule_repository.dart';
 import '../../schedule/domain/class_session.dart';
@@ -24,6 +27,7 @@ class _TrashScreenState extends State<TrashScreen> {
   late final ScheduleRepository _scheduleRepository;
   late final TaskRepository _taskRepository;
   late final StudySessionRepository _studyRepository;
+  late final ExpenseRepository _expenseRepository;
   late final Future<void> _seedFuture;
 
   @override
@@ -34,6 +38,7 @@ class _TrashScreenState extends State<TrashScreen> {
     _scheduleRepository = ScheduleRepository(database);
     _taskRepository = TaskRepository(database);
     _studyRepository = StudySessionRepository(database);
+    _expenseRepository = ExpenseRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
@@ -69,6 +74,15 @@ class _TrashScreenState extends State<TrashScreen> {
     }
 
     await _studyRepository.restoreSession(id);
+  }
+
+  Future<void> _restoreExpense(UniversityExpense expense) async {
+    final id = expense.id;
+    if (id == null) {
+      return;
+    }
+
+    await _expenseRepository.restoreExpense(id);
   }
 
   @override
@@ -109,16 +123,26 @@ class _TrashScreenState extends State<TrashScreen> {
                             final deletedStudySessions =
                                 deletedStudySnapshot.data ??
                                 const <StudySession>[];
-                            return _TrashView(
-                              subjects: subjects,
-                              tasks: tasks,
-                              deletedSubjects: deletedSubjects,
-                              deletedSessions: deletedSessions,
-                              deletedStudySessions: deletedStudySessions,
-                              onRestoreTask: _restoreTask,
-                              onRestoreSubject: _restoreSubject,
-                              onRestoreSession: _restoreSession,
-                              onRestoreStudySession: _restoreStudySession,
+                            return StreamBuilder<List<UniversityExpense>>(
+                              stream: _expenseRepository.watchDeletedExpenses(),
+                              builder: (context, deletedExpenseSnapshot) {
+                                final deletedExpenses =
+                                    deletedExpenseSnapshot.data ??
+                                    const <UniversityExpense>[];
+                                return _TrashView(
+                                  subjects: subjects,
+                                  tasks: tasks,
+                                  deletedSubjects: deletedSubjects,
+                                  deletedSessions: deletedSessions,
+                                  deletedStudySessions: deletedStudySessions,
+                                  deletedExpenses: deletedExpenses,
+                                  onRestoreTask: _restoreTask,
+                                  onRestoreSubject: _restoreSubject,
+                                  onRestoreSession: _restoreSession,
+                                  onRestoreStudySession: _restoreStudySession,
+                                  onRestoreExpense: _restoreExpense,
+                                );
+                              },
                             );
                           },
                         );
@@ -142,10 +166,12 @@ class _TrashView extends StatelessWidget {
     required this.deletedSubjects,
     required this.deletedSessions,
     required this.deletedStudySessions,
+    required this.deletedExpenses,
     required this.onRestoreTask,
     required this.onRestoreSubject,
     required this.onRestoreSession,
     required this.onRestoreStudySession,
+    required this.onRestoreExpense,
   });
 
   final List<Subject> subjects;
@@ -153,10 +179,12 @@ class _TrashView extends StatelessWidget {
   final List<Subject> deletedSubjects;
   final List<ClassSession> deletedSessions;
   final List<StudySession> deletedStudySessions;
+  final List<UniversityExpense> deletedExpenses;
   final ValueChanged<AcademicTask> onRestoreTask;
   final ValueChanged<Subject> onRestoreSubject;
   final ValueChanged<ClassSession> onRestoreSession;
   final ValueChanged<StudySession> onRestoreStudySession;
+  final ValueChanged<UniversityExpense> onRestoreExpense;
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +199,8 @@ class _TrashView extends StatelessWidget {
             if (tasks.isEmpty &&
                 deletedSubjects.isEmpty &&
                 deletedSessions.isEmpty &&
-                deletedStudySessions.isEmpty)
+                deletedStudySessions.isEmpty &&
+                deletedExpenses.isEmpty)
               const _EmptyTrashCard()
             else ...[
               for (final subject in deletedSubjects) ...[
@@ -232,6 +261,13 @@ class _TrashView extends StatelessWidget {
                     ),
                   ),
                   onRestore: () => onRestoreTask(task),
+                ),
+                const SizedBox(height: 10),
+              ],
+              for (final expense in deletedExpenses) ...[
+                _DeletedExpenseCard(
+                  expense: expense,
+                  onRestore: () => onRestoreExpense(expense),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -443,6 +479,25 @@ class _DeletedStudySessionCard extends StatelessWidget {
       subtitle: session.deletedAt == null
           ? subject.name
           : '${subject.name} - ${AppDateFormatter.dateTime(session.deletedAt!)}',
+      onRestore: onRestore,
+    );
+  }
+}
+
+class _DeletedExpenseCard extends StatelessWidget {
+  const _DeletedExpenseCard({required this.expense, required this.onRestore});
+
+  final UniversityExpense expense;
+  final VoidCallback onRestore;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TrashItemCard(
+      icon: Icons.account_balance_wallet_outlined,
+      title: expense.title,
+      subtitle: expense.deletedAt == null
+          ? MoneyFormatter.pesos(expense.amountCents)
+          : '${MoneyFormatter.pesos(expense.amountCents)} - ${AppDateFormatter.dateTime(expense.deletedAt!)}',
       onRestore: onRestore,
     );
   }
