@@ -13,6 +13,7 @@ import '../../schedule/data/academic_seed_service.dart';
 import '../../schedule/data/schedule_repository.dart';
 import '../../schedule/domain/class_session.dart';
 import '../../schedule/presentation/academic_planner_screen.dart';
+import '../../search/presentation/global_search_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../study/data/study_session_repository.dart';
 import '../../study/domain/study_session.dart';
@@ -159,6 +160,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const _AppTitle(),
         actions: [
+          IconButton(
+            tooltip: 'Buscar',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const GlobalSearchScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.search),
+          ),
           IconButton(
             tooltip: 'Papelera',
             onPressed: () {
