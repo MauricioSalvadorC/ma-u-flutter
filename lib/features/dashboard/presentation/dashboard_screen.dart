@@ -5,6 +5,7 @@ import '../../grades/presentation/grade_calculator_screen.dart';
 import '../../schedule/presentation/academic_planner_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../tasks/presentation/tasks_screen.dart';
+import '../../trash/presentation/trash_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -69,6 +70,15 @@ class DashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const _AppTitle(),
         actions: [
+          IconButton(
+            tooltip: 'Papelera',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const TrashScreen()),
+              );
+            },
+            icon: const Icon(Icons.restore_from_trash_outlined),
+          ),
           IconButton(
             tooltip: 'Configuracion',
             onPressed: () {

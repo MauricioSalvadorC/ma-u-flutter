@@ -17,6 +17,7 @@ class AcademicTask {
     required this.dueDate,
     required this.priority,
     required this.isCompleted,
+    required this.deletedAt,
   });
 
   final int? id;
@@ -26,6 +27,7 @@ class AcademicTask {
   final DateTime? dueDate;
   final TaskPriority priority;
   final bool isCompleted;
+  final DateTime? deletedAt;
 
   AcademicTask copyWith({
     int? id,
@@ -35,6 +37,7 @@ class AcademicTask {
     DateTime? dueDate,
     TaskPriority? priority,
     bool? isCompleted,
+    DateTime? deletedAt,
   }) {
     return AcademicTask(
       id: id ?? this.id,
@@ -44,6 +47,7 @@ class AcademicTask {
       dueDate: dueDate ?? this.dueDate,
       priority: priority ?? this.priority,
       isCompleted: isCompleted ?? this.isCompleted,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 }

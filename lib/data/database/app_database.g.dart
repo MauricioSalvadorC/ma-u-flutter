@@ -1038,6 +1038,17 @@ class $AcademicTasksTable extends AcademicTasks
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1048,6 +1059,7 @@ class $AcademicTasksTable extends AcademicTasks
     priorityIndex,
     isCompleted,
     createdAt,
+    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1121,6 +1133,12 @@ class $AcademicTasksTable extends AcademicTasks
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -1162,6 +1180,10 @@ class $AcademicTasksTable extends AcademicTasks
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
 
@@ -1180,6 +1202,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
   final int priorityIndex;
   final bool isCompleted;
   final DateTime createdAt;
+  final DateTime? deletedAt;
   const TaskRow({
     required this.id,
     required this.subjectId,
@@ -1189,6 +1212,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     required this.priorityIndex,
     required this.isCompleted,
     required this.createdAt,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1205,6 +1229,9 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     map['priority_index'] = Variable<int>(priorityIndex);
     map['is_completed'] = Variable<bool>(isCompleted);
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     return map;
   }
 
@@ -1222,6 +1249,9 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
       priorityIndex: Value(priorityIndex),
       isCompleted: Value(isCompleted),
       createdAt: Value(createdAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
     );
   }
 
@@ -1239,6 +1269,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
       priorityIndex: serializer.fromJson<int>(json['priorityIndex']),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -1253,6 +1284,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
       'priorityIndex': serializer.toJson<int>(priorityIndex),
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -1265,6 +1297,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     int? priorityIndex,
     bool? isCompleted,
     DateTime? createdAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
   }) => TaskRow(
     id: id ?? this.id,
     subjectId: subjectId ?? this.subjectId,
@@ -1274,6 +1307,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     priorityIndex: priorityIndex ?? this.priorityIndex,
     isCompleted: isCompleted ?? this.isCompleted,
     createdAt: createdAt ?? this.createdAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   TaskRow copyWithCompanion(AcademicTasksCompanion data) {
     return TaskRow(
@@ -1291,6 +1325,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
           ? data.isCompleted.value
           : this.isCompleted,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -1304,7 +1339,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
           ..write('dueDate: $dueDate, ')
           ..write('priorityIndex: $priorityIndex, ')
           ..write('isCompleted: $isCompleted, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -1319,6 +1355,7 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     priorityIndex,
     isCompleted,
     createdAt,
+    deletedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1331,7 +1368,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
           other.dueDate == this.dueDate &&
           other.priorityIndex == this.priorityIndex &&
           other.isCompleted == this.isCompleted &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.deletedAt == this.deletedAt);
 }
 
 class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
@@ -1343,6 +1381,7 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
   final Value<int> priorityIndex;
   final Value<bool> isCompleted;
   final Value<DateTime> createdAt;
+  final Value<DateTime?> deletedAt;
   const AcademicTasksCompanion({
     this.id = const Value.absent(),
     this.subjectId = const Value.absent(),
@@ -1352,6 +1391,7 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
     this.priorityIndex = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
   });
   AcademicTasksCompanion.insert({
     this.id = const Value.absent(),
@@ -1362,6 +1402,7 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
     required int priorityIndex,
     this.isCompleted = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
   }) : subjectId = Value(subjectId),
        title = Value(title),
        priorityIndex = Value(priorityIndex);
@@ -1374,6 +1415,7 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
     Expression<int>? priorityIndex,
     Expression<bool>? isCompleted,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? deletedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1384,6 +1426,7 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
       if (priorityIndex != null) 'priority_index': priorityIndex,
       if (isCompleted != null) 'is_completed': isCompleted,
       if (createdAt != null) 'created_at': createdAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
     });
   }
 
@@ -1396,6 +1439,7 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
     Value<int>? priorityIndex,
     Value<bool>? isCompleted,
     Value<DateTime>? createdAt,
+    Value<DateTime?>? deletedAt,
   }) {
     return AcademicTasksCompanion(
       id: id ?? this.id,
@@ -1406,6 +1450,7 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
       priorityIndex: priorityIndex ?? this.priorityIndex,
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -1436,6 +1481,9 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     return map;
   }
 
@@ -1449,7 +1497,8 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
           ..write('dueDate: $dueDate, ')
           ..write('priorityIndex: $priorityIndex, ')
           ..write('isCompleted: $isCompleted, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -2296,6 +2345,7 @@ typedef $$AcademicTasksTableCreateCompanionBuilder =
       required int priorityIndex,
       Value<bool> isCompleted,
       Value<DateTime> createdAt,
+      Value<DateTime?> deletedAt,
     });
 typedef $$AcademicTasksTableUpdateCompanionBuilder =
     AcademicTasksCompanion Function({
@@ -2307,6 +2357,7 @@ typedef $$AcademicTasksTableUpdateCompanionBuilder =
       Value<int> priorityIndex,
       Value<bool> isCompleted,
       Value<DateTime> createdAt,
+      Value<DateTime?> deletedAt,
     });
 
 final class $$AcademicTasksTableReferences
@@ -2381,6 +2432,11 @@ class $$AcademicTasksTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$SubjectsTableFilterComposer get subjectId {
     final $$SubjectsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -2449,6 +2505,11 @@ class $$AcademicTasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$SubjectsTableOrderingComposer get subjectId {
     final $$SubjectsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2508,6 +2569,9 @@ class $$AcademicTasksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   $$SubjectsTableAnnotationComposer get subjectId {
     final $$SubjectsTableAnnotationComposer composer = $composerBuilder(
@@ -2569,6 +2633,7 @@ class $$AcademicTasksTableTableManager
                 Value<int> priorityIndex = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
               }) => AcademicTasksCompanion(
                 id: id,
                 subjectId: subjectId,
@@ -2578,6 +2643,7 @@ class $$AcademicTasksTableTableManager
                 priorityIndex: priorityIndex,
                 isCompleted: isCompleted,
                 createdAt: createdAt,
+                deletedAt: deletedAt,
               ),
           createCompanionCallback:
               ({
@@ -2589,6 +2655,7 @@ class $$AcademicTasksTableTableManager
                 required int priorityIndex,
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
               }) => AcademicTasksCompanion.insert(
                 id: id,
                 subjectId: subjectId,
@@ -2598,6 +2665,7 @@ class $$AcademicTasksTableTableManager
                 priorityIndex: priorityIndex,
                 isCompleted: isCompleted,
                 createdAt: createdAt,
+                deletedAt: deletedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(

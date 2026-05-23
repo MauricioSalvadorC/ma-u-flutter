@@ -41,6 +41,7 @@ class AcademicTasks extends Table {
   IntColumn get priorityIndex => integer()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
 }
 
 @DriftDatabase(
@@ -52,7 +53,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'ma_u.sqlite'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -60,6 +61,9 @@ class AppDatabase extends _$AppDatabase {
       onUpgrade: (migrator, from, to) async {
         if (from < 2) {
           await migrator.createTable(academicTasks);
+        }
+        if (from < 3) {
+          await migrator.addColumn(academicTasks, academicTasks.deletedAt);
         }
       },
     );

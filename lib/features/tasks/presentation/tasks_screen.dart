@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/formatters/app_date_formatter.dart';
+import '../../../core/widgets/destructive_confirmation_dialog.dart';
 import '../../../data/database/app_database_provider.dart';
 import '../../schedule/data/academic_seed_service.dart';
 import '../../schedule/data/schedule_repository.dart';
@@ -60,7 +62,19 @@ class _TasksScreenState extends State<TasksScreen> {
       return;
     }
 
-    await _taskRepository.deleteTask(id);
+    final confirmed = await DestructiveConfirmationDialog.show(
+      context: context,
+      title: 'Mover a papelera',
+      message:
+          'La tarea "${task.title}" se movera a la papelera. Podras restaurarla despues.',
+      confirmLabel: 'Mover',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    await _taskRepository.moveToTrash(id);
   }
 
   @override
@@ -310,7 +324,7 @@ class _TaskCard extends StatelessWidget {
                       ),
                       if (dueDate != null)
                         _TaskChip(
-                          label: _formatDate(dueDate),
+                          label: AppDateFormatter.dateWithOptionalTime(dueDate),
                           color: colorScheme.primary,
                         ),
                     ],
@@ -335,12 +349,6 @@ class _TaskCard extends StatelessWidget {
       TaskPriority.medium => const Color(0xFFD97706),
       TaskPriority.high => const Color(0xFFDC2626),
     };
-  }
-
-  static String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
   }
 }
 
@@ -385,7 +393,8 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
   final _descriptionController = TextEditingController();
   late String _subjectId;
   TaskPriority _priority = TaskPriority.medium;
-  DateTime? _dueDate;
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
 
   @override
   void initState() {
@@ -404,16 +413,51 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
     final now = DateTime.now();
     final selectedDate = await showDatePicker(
       context: context,
-      initialDate: _dueDate ?? now,
+      initialDate: _selectedDate ?? now,
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 5),
     );
 
     if (selectedDate != null) {
       setState(() {
-        _dueDate = selectedDate;
+        _selectedDate = selectedDate;
       });
     }
+  }
+
+  Future<void> _pickTime() async {
+    final selectedTime = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? TimeOfDay.now(),
+    );
+
+    if (selectedTime != null) {
+      setState(() {
+        _selectedTime = selectedTime;
+      });
+    }
+  }
+
+  void _clearTime() {
+    setState(() {
+      _selectedTime = null;
+    });
+  }
+
+  DateTime? _buildDueDate() {
+    final selectedDate = _selectedDate;
+    if (selectedDate == null) {
+      return null;
+    }
+
+    final selectedTime = _selectedTime;
+    return DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      selectedTime?.hour ?? 0,
+      selectedTime?.minute ?? 0,
+    );
   }
 
   void _save() {
@@ -426,9 +470,10 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
         subjectId: _subjectId,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        dueDate: _dueDate,
+        dueDate: _buildDueDate(),
         priority: _priority,
         isCompleted: false,
+        deletedAt: null,
       ),
     );
   }
@@ -515,11 +560,29 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
                 onPressed: _pickDate,
                 icon: const Icon(Icons.event_outlined),
                 label: Text(
-                  _dueDate == null
+                  _selectedDate == null
                       ? 'Elegir fecha'
-                      : 'Fecha ${_TaskCard._formatDate(_dueDate!)}',
+                      : 'Fecha ${AppDateFormatter.date(_selectedDate!)}',
                 ),
               ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _selectedDate == null ? null : _pickTime,
+                icon: const Icon(Icons.schedule_outlined),
+                label: Text(
+                  _selectedTime == null
+                      ? 'Hora opcional'
+                      : 'Hora ${_selectedTime!.format(context)}',
+                ),
+              ),
+              if (_selectedTime != null) ...[
+                const SizedBox(height: 6),
+                TextButton.icon(
+                  onPressed: _clearTime,
+                  icon: const Icon(Icons.close),
+                  label: const Text('Quitar hora'),
+                ),
+              ],
             ],
           ),
         ),

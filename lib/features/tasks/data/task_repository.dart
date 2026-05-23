@@ -14,6 +14,12 @@ class TaskRepository {
     );
   }
 
+  Stream<List<AcademicTask>> watchDeletedTasks() {
+    return _database.tasksDao.watchDeleted().map(
+      (rows) => rows.map(_toDomain).toList(),
+    );
+  }
+
   Future<int> saveTask(AcademicTask task) {
     return _database.tasksDao.insertTask(_toCompanion(task));
   }
@@ -22,8 +28,12 @@ class TaskRepository {
     return _database.tasksDao.updateCompleted(id: id, isCompleted: isCompleted);
   }
 
-  Future<int> deleteTask(int id) {
-    return _database.tasksDao.deleteTask(id);
+  Future<bool> moveToTrash(int id) {
+    return _database.tasksDao.moveToTrash(id);
+  }
+
+  Future<bool> restoreTask(int id) {
+    return _database.tasksDao.restoreTask(id);
   }
 
   AcademicTask _toDomain(TaskRow row) {
@@ -35,6 +45,7 @@ class TaskRepository {
       dueDate: row.dueDate,
       priority: TaskPriority.values[row.priorityIndex],
       isCompleted: row.isCompleted,
+      deletedAt: row.deletedAt,
     );
   }
 
@@ -46,6 +57,7 @@ class TaskRepository {
       dueDate: Value(task.dueDate),
       priorityIndex: Value(task.priority.index),
       isCompleted: Value(task.isCompleted),
+      deletedAt: Value(task.deletedAt),
     );
   }
 }

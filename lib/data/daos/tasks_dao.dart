@@ -5,12 +5,21 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
   TasksDao(super.db);
 
   Stream<List<TaskRow>> watchAll() {
-    return (select(academicTasks)..orderBy([
-          (table) => OrderingTerm.asc(table.isCompleted),
-          (table) => OrderingTerm.asc(table.dueDate),
-          (table) => OrderingTerm.desc(table.priorityIndex),
-          (table) => OrderingTerm.desc(table.createdAt),
-        ]))
+    return (select(academicTasks)
+          ..where((table) => table.deletedAt.isNull())
+          ..orderBy([
+            (table) => OrderingTerm.asc(table.isCompleted),
+            (table) => OrderingTerm.asc(table.dueDate),
+            (table) => OrderingTerm.desc(table.priorityIndex),
+            (table) => OrderingTerm.desc(table.createdAt),
+          ]))
+        .watch();
+  }
+
+  Stream<List<TaskRow>> watchDeleted() {
+    return (select(academicTasks)
+          ..where((table) => table.deletedAt.isNotNull())
+          ..orderBy([(table) => OrderingTerm.desc(table.deletedAt)]))
         .watch();
   }
 
@@ -24,7 +33,15 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
         .then((rows) => rows > 0);
   }
 
-  Future<int> deleteTask(int id) {
-    return (delete(academicTasks)..where((table) => table.id.equals(id))).go();
+  Future<bool> moveToTrash(int id) {
+    return (update(academicTasks)..where((table) => table.id.equals(id)))
+        .write(AcademicTasksCompanion(deletedAt: Value(DateTime.now())))
+        .then((rows) => rows > 0);
+  }
+
+  Future<bool> restoreTask(int id) {
+    return (update(academicTasks)..where((table) => table.id.equals(id)))
+        .write(const AcademicTasksCompanion(deletedAt: Value(null)))
+        .then((rows) => rows > 0);
   }
 }
