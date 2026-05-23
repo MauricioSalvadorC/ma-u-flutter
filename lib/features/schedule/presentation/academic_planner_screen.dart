@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/app_detail_bottom_sheet.dart';
 import '../../../core/widgets/destructive_confirmation_dialog.dart';
 import '../../../data/database/app_database_provider.dart';
 import '../../schedule/data/academic_seed_service.dart';
@@ -499,59 +500,47 @@ class _SessionCard extends StatelessWidget {
   }
 
   void _showSessionDetails(BuildContext context) {
-    showModalBottomSheet<void>(
+    AppDetailBottomSheet.show(
       context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  subject.name,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 14),
-                _AcademicDetailRow(label: 'Dia', value: session.weekday.label),
-                _AcademicDetailRow(label: 'Horario', value: session.timeRange),
-                _AcademicDetailRow(label: 'Salon', value: session.location),
-                _AcademicDetailRow(label: 'Docente', value: subject.teacher),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          onEdit();
-                        },
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Editar'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          onDelete();
-                        },
-                        icon: const Icon(Icons.delete_outline),
-                        label: const Text('Papelera'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      children: [
+        Text(
+          subject.name,
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 14),
+        _AcademicDetailRow(label: 'Dia', value: session.weekday.label),
+        _AcademicDetailRow(label: 'Horario', value: session.timeRange),
+        _AcademicDetailRow(label: 'Salon', value: session.location),
+        _AcademicDetailRow(label: 'Docente', value: subject.teacher),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onEdit();
+                },
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Editar'),
+              ),
             ),
-          ),
-        );
-      },
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onDelete();
+                },
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Papelera'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -770,61 +759,49 @@ class _SubjectCard extends StatelessWidget {
   }
 
   void _showSubjectDetails(BuildContext context) {
-    showModalBottomSheet<void>(
+    AppDetailBottomSheet.show(
       context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  subject.name,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 14),
-                _AcademicDetailRow(label: 'Docente', value: subject.teacher),
-                _AcademicDetailRow(label: 'Salon', value: subject.room),
-                _AcademicDetailRow(
-                  label: 'Creditos',
-                  value: subject.credits.toString(),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          onEdit();
-                        },
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Editar'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          onDelete();
-                        },
-                        icon: const Icon(Icons.delete_outline),
-                        label: const Text('Papelera'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      children: [
+        Text(
+          subject.name,
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 14),
+        _AcademicDetailRow(label: 'Docente', value: subject.teacher),
+        _AcademicDetailRow(label: 'Salon', value: subject.room),
+        _AcademicDetailRow(
+          label: 'Creditos',
+          value: subject.credits.toString(),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onEdit();
+                },
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Editar'),
+              ),
             ),
-          ),
-        );
-      },
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onDelete();
+                },
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Papelera'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

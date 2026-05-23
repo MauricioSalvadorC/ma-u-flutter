@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 part '../daos/schedule_dao.dart';
+part '../daos/semesters_dao.dart';
+part '../daos/study_sessions_dao.dart';
 part '../daos/subjects_dao.dart';
 part '../daos/tasks_dao.dart';
 part 'app_database.g.dart';
@@ -46,16 +48,61 @@ class AcademicTasks extends Table {
   DateTimeColumn get deletedAt => dateTime().nullable()();
 }
 
+@DataClassName('StudySessionRow')
+class StudySessions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get subjectId => text().references(Subjects, #id)();
+  TextColumn get title => text()();
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get startsAt => dateTime().nullable()();
+  IntColumn get durationMinutes => integer()();
+  IntColumn get focusLevelIndex => integer()();
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+}
+
+@DataClassName('SemesterRow')
+class Semesters extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  IntColumn get year => integer()();
+  IntColumn get termIndex => integer()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+@DataClassName('SemesterCourseRow')
+class SemesterCourses extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get semesterId => text().references(Semesters, #id)();
+  TextColumn get name => text()();
+  IntColumn get credits => integer()();
+  RealColumn get finalGrade => real()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+}
+
 @DriftDatabase(
-  tables: [Subjects, ScheduleEntries, AcademicTasks],
-  daos: [SubjectsDao, ScheduleDao, TasksDao],
+  tables: [
+    Subjects,
+    ScheduleEntries,
+    AcademicTasks,
+    StudySessions,
+    Semesters,
+    SemesterCourses,
+  ],
+  daos: [SubjectsDao, ScheduleDao, TasksDao, StudySessionsDao, SemestersDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
     : super(executor ?? driftDatabase(name: 'ma_u.sqlite'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -70,6 +117,13 @@ class AppDatabase extends _$AppDatabase {
         if (from < 4) {
           await migrator.addColumn(subjects, subjects.deletedAt);
           await migrator.addColumn(scheduleEntries, scheduleEntries.deletedAt);
+        }
+        if (from < 5) {
+          await migrator.createTable(studySessions);
+        }
+        if (from < 6) {
+          await migrator.createTable(semesters);
+          await migrator.createTable(semesterCourses);
         }
       },
     );

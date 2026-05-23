@@ -5,6 +5,8 @@ import '../../../data/database/app_database_provider.dart';
 import '../../schedule/data/academic_seed_service.dart';
 import '../../schedule/data/schedule_repository.dart';
 import '../../schedule/domain/class_session.dart';
+import '../../study/data/study_session_repository.dart';
+import '../../study/domain/study_session.dart';
 import '../../subjects/data/subject_repository.dart';
 import '../../subjects/domain/subject.dart';
 import '../../tasks/data/task_repository.dart';
@@ -21,6 +23,7 @@ class _TrashScreenState extends State<TrashScreen> {
   late final SubjectRepository _subjectRepository;
   late final ScheduleRepository _scheduleRepository;
   late final TaskRepository _taskRepository;
+  late final StudySessionRepository _studyRepository;
   late final Future<void> _seedFuture;
 
   @override
@@ -30,6 +33,7 @@ class _TrashScreenState extends State<TrashScreen> {
     _subjectRepository = SubjectRepository(database);
     _scheduleRepository = ScheduleRepository(database);
     _taskRepository = TaskRepository(database);
+    _studyRepository = StudySessionRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
@@ -56,6 +60,15 @@ class _TrashScreenState extends State<TrashScreen> {
     }
 
     await _scheduleRepository.restoreSession(id);
+  }
+
+  Future<void> _restoreStudySession(StudySession session) async {
+    final id = session.id;
+    if (id == null) {
+      return;
+    }
+
+    await _studyRepository.restoreSession(id);
   }
 
   @override
@@ -90,14 +103,24 @@ class _TrashScreenState extends State<TrashScreen> {
                         final deletedSessions =
                             deletedSessionSnapshot.data ??
                             const <ClassSession>[];
-                        return _TrashView(
-                          subjects: subjects,
-                          tasks: tasks,
-                          deletedSubjects: deletedSubjects,
-                          deletedSessions: deletedSessions,
-                          onRestoreTask: _restoreTask,
-                          onRestoreSubject: _restoreSubject,
-                          onRestoreSession: _restoreSession,
+                        return StreamBuilder<List<StudySession>>(
+                          stream: _studyRepository.watchDeletedSessions(),
+                          builder: (context, deletedStudySnapshot) {
+                            final deletedStudySessions =
+                                deletedStudySnapshot.data ??
+                                const <StudySession>[];
+                            return _TrashView(
+                              subjects: subjects,
+                              tasks: tasks,
+                              deletedSubjects: deletedSubjects,
+                              deletedSessions: deletedSessions,
+                              deletedStudySessions: deletedStudySessions,
+                              onRestoreTask: _restoreTask,
+                              onRestoreSubject: _restoreSubject,
+                              onRestoreSession: _restoreSession,
+                              onRestoreStudySession: _restoreStudySession,
+                            );
+                          },
                         );
                       },
                     );
@@ -118,18 +141,22 @@ class _TrashView extends StatelessWidget {
     required this.tasks,
     required this.deletedSubjects,
     required this.deletedSessions,
+    required this.deletedStudySessions,
     required this.onRestoreTask,
     required this.onRestoreSubject,
     required this.onRestoreSession,
+    required this.onRestoreStudySession,
   });
 
   final List<Subject> subjects;
   final List<AcademicTask> tasks;
   final List<Subject> deletedSubjects;
   final List<ClassSession> deletedSessions;
+  final List<StudySession> deletedStudySessions;
   final ValueChanged<AcademicTask> onRestoreTask;
   final ValueChanged<Subject> onRestoreSubject;
   final ValueChanged<ClassSession> onRestoreSession;
+  final ValueChanged<StudySession> onRestoreStudySession;
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +170,8 @@ class _TrashView extends StatelessWidget {
             const SizedBox(height: 16),
             if (tasks.isEmpty &&
                 deletedSubjects.isEmpty &&
-                deletedSessions.isEmpty)
+                deletedSessions.isEmpty &&
+                deletedStudySessions.isEmpty)
               const _EmptyTrashCard()
             else ...[
               for (final subject in deletedSubjects) ...[
@@ -168,6 +196,24 @@ class _TrashView extends StatelessWidget {
                     ),
                   ),
                   onRestore: () => onRestoreSession(session),
+                ),
+                const SizedBox(height: 10),
+              ],
+              for (final studySession in deletedStudySessions) ...[
+                _DeletedStudySessionCard(
+                  session: studySession,
+                  subject: subjects.firstWhere(
+                    (subject) => subject.id == studySession.subjectId,
+                    orElse: () => const Subject(
+                      id: 'unknown',
+                      name: 'Materia',
+                      teacher: '',
+                      room: '',
+                      credits: 0,
+                      accentColorValue: 0xFF64748B,
+                    ),
+                  ),
+                  onRestore: () => onRestoreStudySession(studySession),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -373,6 +419,30 @@ class _DeletedSessionCard extends StatelessWidget {
       subtitle: session.deletedAt == null
           ? 'Clase'
           : 'Clase - ${AppDateFormatter.dateTime(session.deletedAt!)}',
+      onRestore: onRestore,
+    );
+  }
+}
+
+class _DeletedStudySessionCard extends StatelessWidget {
+  const _DeletedStudySessionCard({
+    required this.session,
+    required this.subject,
+    required this.onRestore,
+  });
+
+  final StudySession session;
+  final Subject subject;
+  final VoidCallback onRestore;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TrashItemCard(
+      icon: Icons.psychology_alt_outlined,
+      title: session.title,
+      subtitle: session.deletedAt == null
+          ? subject.name
+          : '${subject.name} - ${AppDateFormatter.dateTime(session.deletedAt!)}',
       onRestore: onRestore,
     );
   }

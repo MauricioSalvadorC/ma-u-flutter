@@ -8,20 +8,20 @@ import '../../schedule/data/academic_seed_service.dart';
 import '../../schedule/data/schedule_repository.dart';
 import '../../subjects/data/subject_repository.dart';
 import '../../subjects/domain/subject.dart';
-import '../data/task_repository.dart';
-import '../domain/academic_task.dart';
+import '../data/study_session_repository.dart';
+import '../domain/study_session.dart';
 
-class TasksScreen extends StatefulWidget {
-  const TasksScreen({super.key});
+class StudyAgendaScreen extends StatefulWidget {
+  const StudyAgendaScreen({super.key});
 
   @override
-  State<TasksScreen> createState() => _TasksScreenState();
+  State<StudyAgendaScreen> createState() => _StudyAgendaScreenState();
 }
 
-class _TasksScreenState extends State<TasksScreen> {
+class _StudyAgendaScreenState extends State<StudyAgendaScreen> {
   late final SubjectRepository _subjectRepository;
   late final ScheduleRepository _scheduleRepository;
-  late final TaskRepository _taskRepository;
+  late final StudySessionRepository _studyRepository;
   late final Future<void> _seedFuture;
 
   @override
@@ -30,56 +30,59 @@ class _TasksScreenState extends State<TasksScreen> {
     final database = AppDatabaseProvider.instance;
     _subjectRepository = SubjectRepository(database);
     _scheduleRepository = ScheduleRepository(database);
-    _taskRepository = TaskRepository(database);
+    _studyRepository = StudySessionRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
     ).seedIfNeeded();
   }
 
-  Future<void> _openTaskForm(
+  Future<void> _openForm(
     List<Subject> subjects, {
-    AcademicTask? initialTask,
+    StudySession? initialSession,
   }) async {
-    final task = await showDialog<AcademicTask>(
+    final session = await showDialog<StudySession>(
       context: context,
-      builder: (_) =>
-          _TaskFormDialog(subjects: subjects, initialTask: initialTask),
+      builder: (_) => _StudySessionFormDialog(
+        subjects: subjects,
+        initialSession: initialSession,
+      ),
     );
 
-    if (task != null) {
-      await _taskRepository.saveTask(task);
+    if (session != null) {
+      await _studyRepository.saveSession(session);
     }
   }
 
-  Future<void> _toggleTask(AcademicTask task) async {
-    final id = task.id;
+  Future<void> _toggleSession(StudySession session) async {
+    final id = session.id;
     if (id == null) {
       return;
     }
 
-    await _taskRepository.setCompleted(id: id, isCompleted: !task.isCompleted);
+    await _studyRepository.setCompleted(
+      id: id,
+      isCompleted: !session.isCompleted,
+    );
   }
 
-  Future<void> _deleteTask(AcademicTask task) async {
-    final id = task.id;
+  Future<void> _moveToTrash(StudySession session) async {
+    final id = session.id;
     if (id == null) {
       return;
     }
 
     final confirmed = await DestructiveConfirmationDialog.show(
       context: context,
-      title: 'Mover a papelera',
+      title: 'Mover sesion a papelera',
       message:
-          'La tarea "${task.title}" se movera a la papelera. Podras restaurarla despues.',
+          'La sesion "${session.title}" se ocultara de tu agenda. Podras restaurarla despues.',
       confirmLabel: 'Mover',
     );
 
-    if (!confirmed) {
-      return;
+    if (confirmed) {
+      await _studyRepository.moveToTrash(id);
     }
-
-    await _taskRepository.moveToTrash(id);
   }
 
   @override
@@ -98,18 +101,18 @@ class _TasksScreenState extends State<TasksScreen> {
           builder: (context, subjectSnapshot) {
             final subjects = subjectSnapshot.data ?? const <Subject>[];
 
-            return StreamBuilder<List<AcademicTask>>(
-              stream: _taskRepository.watchTasks(),
-              builder: (context, taskSnapshot) {
-                final tasks = taskSnapshot.data ?? const <AcademicTask>[];
-                return _TasksView(
+            return StreamBuilder<List<StudySession>>(
+              stream: _studyRepository.watchSessions(),
+              builder: (context, studySnapshot) {
+                final sessions = studySnapshot.data ?? const <StudySession>[];
+                return _StudyAgendaView(
                   subjects: subjects,
-                  tasks: tasks,
-                  onAddTask: () => _openTaskForm(subjects),
-                  onEditTask: (task) =>
-                      _openTaskForm(subjects, initialTask: task),
-                  onToggleTask: _toggleTask,
-                  onDeleteTask: _deleteTask,
+                  sessions: sessions,
+                  onAdd: () => _openForm(subjects),
+                  onEdit: (session) =>
+                      _openForm(subjects, initialSession: session),
+                  onToggle: _toggleSession,
+                  onDelete: _moveToTrash,
                 );
               },
             );
@@ -120,53 +123,65 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 }
 
-class _TasksView extends StatefulWidget {
-  const _TasksView({
+class _StudyAgendaView extends StatefulWidget {
+  const _StudyAgendaView({
     required this.subjects,
-    required this.tasks,
-    required this.onAddTask,
-    required this.onEditTask,
-    required this.onToggleTask,
-    required this.onDeleteTask,
+    required this.sessions,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onToggle,
+    required this.onDelete,
   });
 
   final List<Subject> subjects;
-  final List<AcademicTask> tasks;
-  final VoidCallback onAddTask;
-  final ValueChanged<AcademicTask> onEditTask;
-  final ValueChanged<AcademicTask> onToggleTask;
-  final ValueChanged<AcademicTask> onDeleteTask;
+  final List<StudySession> sessions;
+  final VoidCallback onAdd;
+  final ValueChanged<StudySession> onEdit;
+  final ValueChanged<StudySession> onToggle;
+  final ValueChanged<StudySession> onDelete;
 
   @override
-  State<_TasksView> createState() => _TasksViewState();
+  State<_StudyAgendaView> createState() => _StudyAgendaViewState();
 }
 
-class _TasksViewState extends State<_TasksView> {
-  _TaskFilter _filter = _TaskFilter.pending;
+class _StudyAgendaViewState extends State<_StudyAgendaView> {
+  _StudyFilter _filter = _StudyFilter.pending;
 
   @override
   Widget build(BuildContext context) {
-    final pendingCount = widget.tasks.where((task) => !task.isCompleted).length;
-    final completedCount = widget.tasks.length - pendingCount;
-    final filteredTasks = widget.tasks.where(_matchesFilter).toList();
+    final activeSubjectIds = widget.subjects
+        .map((subject) => subject.id)
+        .toSet();
+    final visibleSessions = widget.sessions
+        .where((session) => activeSubjectIds.contains(session.subjectId))
+        .where(_matchesFilter)
+        .toList();
+    final pendingCount = widget.sessions
+        .where((session) => activeSubjectIds.contains(session.subjectId))
+        .where((session) => !session.isCompleted)
+        .length;
+    final totalMinutes = widget.sessions
+        .where((session) => activeSubjectIds.contains(session.subjectId))
+        .where((session) => !session.isCompleted)
+        .fold<int>(0, (total, session) => total + session.durationMinutes);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tareas')),
+      appBar: AppBar(title: const Text('Agenda de estudio')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: widget.onAddTask,
-        icon: const Icon(Icons.add_task_outlined),
-        label: const Text('Tarea'),
+        onPressed: widget.onAdd,
+        icon: const Icon(Icons.add_outlined),
+        label: const Text('Estudio'),
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
           children: [
-            _TasksSummary(
+            _StudySummary(
               pendingCount: pendingCount,
-              completedCount: completedCount,
+              totalMinutes: totalMinutes,
             ),
             const SizedBox(height: 16),
-            _TaskFilterBar(
+            _StudyFilterBar(
               selected: _filter,
               onSelected: (filter) {
                 setState(() {
@@ -175,26 +190,18 @@ class _TasksViewState extends State<_TasksView> {
               },
             ),
             const SizedBox(height: 16),
-            if (filteredTasks.isEmpty)
-              const _EmptyTasksCard()
+            if (visibleSessions.isEmpty)
+              const _EmptyStudyCard()
             else
-              for (final task in filteredTasks) ...[
-                _TaskCard(
-                  task: task,
+              for (final session in visibleSessions) ...[
+                _StudySessionCard(
+                  session: session,
                   subject: widget.subjects.firstWhere(
-                    (subject) => subject.id == task.subjectId,
-                    orElse: () => const Subject(
-                      id: 'unknown',
-                      name: 'Materia',
-                      teacher: '',
-                      room: '',
-                      credits: 0,
-                      accentColorValue: 0xFF64748B,
-                    ),
+                    (subject) => subject.id == session.subjectId,
                   ),
-                  onEdit: () => widget.onEditTask(task),
-                  onToggle: () => widget.onToggleTask(task),
-                  onDelete: () => widget.onDeleteTask(task),
+                  onEdit: () => widget.onEdit(session),
+                  onToggle: () => widget.onToggle(session),
+                  onDelete: () => widget.onDelete(session),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -204,33 +211,33 @@ class _TasksViewState extends State<_TasksView> {
     );
   }
 
-  bool _matchesFilter(AcademicTask task) {
+  bool _matchesFilter(StudySession session) {
     return switch (_filter) {
-      _TaskFilter.all => true,
-      _TaskFilter.pending => !task.isCompleted,
-      _TaskFilter.critical =>
-        !task.isCompleted && task.priority == TaskPriority.high,
-      _TaskFilter.completed => task.isCompleted,
+      _StudyFilter.all => true,
+      _StudyFilter.pending => !session.isCompleted,
+      _StudyFilter.exam =>
+        !session.isCompleted && session.focusLevel == FocusLevel.exam,
+      _StudyFilter.completed => session.isCompleted,
     };
   }
 }
 
-enum _TaskFilter {
+enum _StudyFilter {
   all('Todas'),
   pending('Pendientes'),
-  critical('Criticas'),
+  exam('Parciales'),
   completed('Completadas');
 
-  const _TaskFilter(this.label);
+  const _StudyFilter(this.label);
 
   final String label;
 }
 
-class _TaskFilterBar extends StatelessWidget {
-  const _TaskFilterBar({required this.selected, required this.onSelected});
+class _StudyFilterBar extends StatelessWidget {
+  const _StudyFilterBar({required this.selected, required this.onSelected});
 
-  final _TaskFilter selected;
-  final ValueChanged<_TaskFilter> onSelected;
+  final _StudyFilter selected;
+  final ValueChanged<_StudyFilter> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +245,7 @@ class _TaskFilterBar extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final filter in _TaskFilter.values) ...[
+          for (final filter in _StudyFilter.values) ...[
             ChoiceChip(
               label: Text(filter.label),
               selected: selected == filter,
@@ -252,18 +259,18 @@ class _TaskFilterBar extends StatelessWidget {
   }
 }
 
-class _TasksSummary extends StatelessWidget {
-  const _TasksSummary({
-    required this.pendingCount,
-    required this.completedCount,
-  });
+class _StudySummary extends StatelessWidget {
+  const _StudySummary({required this.pendingCount, required this.totalMinutes});
 
   final int pendingCount;
-  final int completedCount;
+  final int totalMinutes;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
+    final timeLabel = hours == 0 ? '${minutes}m' : '${hours}h ${minutes}m';
 
     return Card(
       child: Padding(
@@ -278,7 +285,7 @@ class _TasksSummary extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
-                Icons.task_alt_outlined,
+                Icons.psychology_alt_outlined,
                 color: colorScheme.onPrimaryContainer,
               ),
             ),
@@ -288,13 +295,11 @@ class _TasksSummary extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Control de entregas',
+                    'Plan de enfoque',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '$pendingCount pendientes - $completedCount completadas',
-                  ),
+                  Text('$pendingCount pendientes - $timeLabel por estudiar'),
                 ],
               ),
             ),
@@ -305,8 +310,8 @@ class _TasksSummary extends StatelessWidget {
   }
 }
 
-class _EmptyTasksCard extends StatelessWidget {
-  const _EmptyTasksCard();
+class _EmptyStudyCard extends StatelessWidget {
+  const _EmptyStudyCard();
 
   @override
   Widget build(BuildContext context) {
@@ -317,15 +322,19 @@ class _EmptyTasksCard extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         child: Column(
           children: [
-            Icon(Icons.inbox_outlined, color: colorScheme.primary, size: 38),
+            Icon(
+              Icons.self_improvement_outlined,
+              color: colorScheme.primary,
+              size: 38,
+            ),
             const SizedBox(height: 10),
             const Text(
-              'Sin tareas todavia',
+              'Sin sesiones todavia',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 4),
             Text(
-              'Crea entregas, lecturas, proyectos o parciales por materia.',
+              'Planea repasos, lectura, talleres o preparacion de parciales.',
               textAlign: TextAlign.center,
               style: TextStyle(color: colorScheme.onSurfaceVariant),
             ),
@@ -336,16 +345,16 @@ class _EmptyTasksCard extends StatelessWidget {
   }
 }
 
-class _TaskCard extends StatelessWidget {
-  const _TaskCard({
-    required this.task,
+class _StudySessionCard extends StatelessWidget {
+  const _StudySessionCard({
+    required this.session,
     required this.subject,
     required this.onEdit,
     required this.onToggle,
     required this.onDelete,
   });
 
-  final AcademicTask task;
+  final StudySession session;
   final Subject subject;
   final VoidCallback onEdit;
   final VoidCallback onToggle;
@@ -355,87 +364,95 @@ class _TaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final subjectColor = Color(subject.accentColorValue);
     final colorScheme = Theme.of(context).colorScheme;
-    final dueDate = task.dueDate;
+    final startsAt = session.startsAt;
 
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        onTap: () => _showTaskDetails(context),
-        onLongPress: () => _showTaskActions(context),
+        onTap: () => _showDetails(context),
+        onLongPress: () => _showActions(context),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Checkbox(value: task.isCompleted, onChanged: (_) => onToggle()),
+              Checkbox(
+                value: session.isCompleted,
+                onChanged: (_) => onToggle(),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      task.title,
+                      session.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
-                        decoration: task.isCompleted
+                        decoration: session.isCompleted
                             ? TextDecoration.lineThrough
                             : TextDecoration.none,
                       ),
                     ),
-                    if (task.description.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        task.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      ),
-                    ],
+                    const SizedBox(height: 4),
+                    Text(
+                      subject.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _TaskChip(label: subject.name, color: subjectColor),
-                        _TaskChip(
-                          label: task.priority.label,
-                          color: _priorityColor(task.priority),
+                        _StudyChip(label: subject.name, color: subjectColor),
+                        _StudyChip(
+                          label: session.focusLevel.label,
+                          color: _focusColor(session.focusLevel),
                         ),
-                        if (dueDate != null)
-                          _TaskChip(
+                        _StudyChip(
+                          label: '${session.durationMinutes} min',
+                          color: colorScheme.primary,
+                        ),
+                        if (startsAt != null)
+                          _StudyChip(
                             label: AppDateFormatter.dateWithOptionalTime(
-                              dueDate,
+                              startsAt,
                             ),
-                            color: colorScheme.primary,
+                            color: const Color(0xFF0F766E),
                           ),
                       ],
                     ),
                   ],
                 ),
               ),
-              PopupMenuButton<_TaskAction>(
-                tooltip: 'Opciones de tarea',
+              PopupMenuButton<_StudyAction>(
+                tooltip: 'Opciones de estudio',
                 onSelected: (action) {
                   switch (action) {
-                    case _TaskAction.view:
-                      _showTaskDetails(context);
-                    case _TaskAction.edit:
+                    case _StudyAction.view:
+                      _showDetails(context);
+                    case _StudyAction.edit:
                       onEdit();
-                    case _TaskAction.delete:
+                    case _StudyAction.delete:
                       onDelete();
                   }
                 },
                 itemBuilder: (context) => const [
                   PopupMenuItem(
-                    value: _TaskAction.view,
+                    value: _StudyAction.view,
                     child: Text('Ver detalle'),
                   ),
-                  PopupMenuItem(value: _TaskAction.edit, child: Text('Editar')),
                   PopupMenuItem(
-                    value: _TaskAction.delete,
+                    value: _StudyAction.edit,
+                    child: Text('Editar'),
+                  ),
+                  PopupMenuItem(
+                    value: _StudyAction.delete,
                     child: Text('Mover a papelera'),
                   ),
                 ],
@@ -447,35 +464,39 @@ class _TaskCard extends StatelessWidget {
     );
   }
 
-  void _showTaskDetails(BuildContext context) {
-    final dueDate = task.dueDate;
-    final deletedAt = task.deletedAt;
+  void _showDetails(BuildContext context) {
+    final startsAt = session.startsAt;
+    final deletedAt = session.deletedAt;
 
     AppDetailBottomSheet.show(
       context: context,
       children: [
         Text(
-          task.title,
+          session.title,
           style: Theme.of(
             context,
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 14),
-        _TaskDetailRow(label: 'Materia', value: subject.name),
-        _TaskDetailRow(label: 'Prioridad', value: task.priority.label),
-        _TaskDetailRow(
-          label: 'Estado',
-          value: task.isCompleted ? 'Completada' : 'Pendiente',
+        _StudyDetailRow(label: 'Materia', value: subject.name),
+        _StudyDetailRow(label: 'Enfoque', value: session.focusLevel.label),
+        _StudyDetailRow(
+          label: 'Duracion',
+          value: '${session.durationMinutes} minutos',
         ),
-        if (dueDate != null)
-          _TaskDetailRow(
-            label: 'Fecha limite',
-            value: AppDateFormatter.dateWithOptionalTime(dueDate),
+        _StudyDetailRow(
+          label: 'Estado',
+          value: session.isCompleted ? 'Completada' : 'Pendiente',
+        ),
+        if (startsAt != null)
+          _StudyDetailRow(
+            label: 'Fecha',
+            value: AppDateFormatter.dateWithOptionalTime(startsAt),
           ),
-        if (task.description.isNotEmpty)
-          _TaskDetailRow(label: 'Descripcion', value: task.description),
+        if (session.notes.isNotEmpty)
+          _StudyDetailRow(label: 'Notas', value: session.notes),
         if (deletedAt != null)
-          _TaskDetailRow(
+          _StudyDetailRow(
             label: 'Movida a papelera',
             value: AppDateFormatter.dateTime(deletedAt),
           ),
@@ -509,7 +530,7 @@ class _TaskCard extends StatelessWidget {
     );
   }
 
-  void _showTaskActions(BuildContext context) {
+  void _showActions(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -525,7 +546,7 @@ class _TaskCard extends StatelessWidget {
                   title: const Text('Ver detalle'),
                   onTap: () {
                     Navigator.of(context).pop();
-                    _showTaskDetails(context);
+                    _showDetails(context);
                   },
                 ),
                 ListTile(
@@ -552,19 +573,19 @@ class _TaskCard extends StatelessWidget {
     );
   }
 
-  static Color _priorityColor(TaskPriority priority) {
-    return switch (priority) {
-      TaskPriority.low => const Color(0xFF16A34A),
-      TaskPriority.medium => const Color(0xFFD97706),
-      TaskPriority.high => const Color(0xFFDC2626),
+  static Color _focusColor(FocusLevel focusLevel) {
+    return switch (focusLevel) {
+      FocusLevel.light => const Color(0xFF16A34A),
+      FocusLevel.deep => const Color(0xFF2563EB),
+      FocusLevel.exam => const Color(0xFFBE123C),
     };
   }
 }
 
-enum _TaskAction { view, edit, delete }
+enum _StudyAction { view, edit, delete }
 
-class _TaskDetailRow extends StatelessWidget {
-  const _TaskDetailRow({required this.label, required this.value});
+class _StudyDetailRow extends StatelessWidget {
+  const _StudyDetailRow({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -594,8 +615,8 @@ class _TaskDetailRow extends StatelessWidget {
   }
 }
 
-class _TaskChip extends StatelessWidget {
-  const _TaskChip({required this.label, required this.color});
+class _StudyChip extends StatelessWidget {
+  const _StudyChip({required this.label, required this.color});
 
   final String label;
   final Color color;
@@ -620,41 +641,47 @@ class _TaskChip extends StatelessWidget {
   }
 }
 
-class _TaskFormDialog extends StatefulWidget {
-  const _TaskFormDialog({required this.subjects, this.initialTask});
+class _StudySessionFormDialog extends StatefulWidget {
+  const _StudySessionFormDialog({required this.subjects, this.initialSession});
 
   final List<Subject> subjects;
-  final AcademicTask? initialTask;
+  final StudySession? initialSession;
 
   @override
-  State<_TaskFormDialog> createState() => _TaskFormDialogState();
+  State<_StudySessionFormDialog> createState() =>
+      _StudySessionFormDialogState();
 }
 
-class _TaskFormDialogState extends State<_TaskFormDialog> {
+class _StudySessionFormDialogState extends State<_StudySessionFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
+  final _notesController = TextEditingController();
+  final _durationController = TextEditingController(text: '45');
   late String _subjectId;
-  TaskPriority _priority = TaskPriority.medium;
+  FocusLevel _focusLevel = FocusLevel.deep;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
   @override
   void initState() {
     super.initState();
-    final task = widget.initialTask;
+    final session = widget.initialSession;
     _subjectId =
-        task?.subjectId ??
+        session?.subjectId ??
         (widget.subjects.isEmpty ? '' : widget.subjects.first.id);
-    if (task != null) {
-      _titleController.text = task.title;
-      _descriptionController.text = task.description;
-      _priority = task.priority;
-      final dueDate = task.dueDate;
-      if (dueDate != null) {
-        _selectedDate = dueDate;
-        if (dueDate.hour != 0 || dueDate.minute != 0) {
-          _selectedTime = TimeOfDay(hour: dueDate.hour, minute: dueDate.minute);
+    if (session != null) {
+      _titleController.text = session.title;
+      _notesController.text = session.notes;
+      _durationController.text = session.durationMinutes.toString();
+      _focusLevel = session.focusLevel;
+      final startsAt = session.startsAt;
+      if (startsAt != null) {
+        _selectedDate = startsAt;
+        if (startsAt.hour != 0 || startsAt.minute != 0) {
+          _selectedTime = TimeOfDay(
+            hour: startsAt.hour,
+            minute: startsAt.minute,
+          );
         }
       }
     }
@@ -663,7 +690,8 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
+    _notesController.dispose();
+    _durationController.dispose();
     super.dispose();
   }
 
@@ -696,13 +724,20 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
     }
   }
 
+  void _clearDateTime() {
+    setState(() {
+      _selectedDate = null;
+      _selectedTime = null;
+    });
+  }
+
   void _clearTime() {
     setState(() {
       _selectedTime = null;
     });
   }
 
-  DateTime? _buildDueDate() {
+  DateTime? _buildStartsAt() {
     final selectedDate = _selectedDate;
     if (selectedDate == null) {
       return null;
@@ -724,15 +759,16 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
     }
 
     Navigator.of(context).pop(
-      AcademicTask(
-        id: widget.initialTask?.id,
+      StudySession(
+        id: widget.initialSession?.id,
         subjectId: _subjectId,
         title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        dueDate: _buildDueDate(),
-        priority: _priority,
-        isCompleted: widget.initialTask?.isCompleted ?? false,
-        deletedAt: widget.initialTask?.deletedAt,
+        notes: _notesController.text.trim(),
+        startsAt: _buildStartsAt(),
+        durationMinutes: int.parse(_durationController.text.trim()),
+        focusLevel: _focusLevel,
+        isCompleted: widget.initialSession?.isCompleted ?? false,
+        deletedAt: widget.initialSession?.deletedAt,
       ),
     );
   }
@@ -741,7 +777,7 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
   Widget build(BuildContext context) {
     if (widget.subjects.isEmpty) {
       return AlertDialog(
-        title: const Text('Nueva tarea'),
+        title: const Text('Nueva sesion'),
         content: const Text('Primero crea una materia.'),
         actions: [
           FilledButton(
@@ -753,7 +789,11 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
     }
 
     return AlertDialog(
-      title: Text(widget.initialTask == null ? 'Nueva tarea' : 'Editar tarea'),
+      title: Text(
+        widget.initialSession == null
+            ? 'Nueva sesion de estudio'
+            : 'Editar sesion',
+      ),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -772,9 +812,9 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
               ),
               const SizedBox(height: 10),
               TextFormField(
-                controller: _descriptionController,
+                controller: _notesController,
                 maxLines: 2,
-                decoration: const InputDecoration(labelText: 'Descripcion'),
+                decoration: const InputDecoration(labelText: 'Notas'),
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
@@ -796,22 +836,37 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
                 },
               ),
               const SizedBox(height: 10),
-              DropdownButtonFormField<TaskPriority>(
-                initialValue: _priority,
-                decoration: const InputDecoration(labelText: 'Prioridad'),
+              DropdownButtonFormField<FocusLevel>(
+                initialValue: _focusLevel,
+                decoration: const InputDecoration(labelText: 'Enfoque'),
                 items: [
-                  for (final priority in TaskPriority.values)
+                  for (final focusLevel in FocusLevel.values)
                     DropdownMenuItem(
-                      value: priority,
-                      child: Text(priority.label),
+                      value: focusLevel,
+                      child: Text(focusLevel.label),
                     ),
                 ],
                 onChanged: (value) {
                   if (value != null) {
                     setState(() {
-                      _priority = value;
+                      _focusLevel = value;
                     });
                   }
+                },
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _durationController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Duracion en minutos',
+                ),
+                validator: (value) {
+                  final duration = int.tryParse(value ?? '');
+                  if (duration == null || duration < 5 || duration > 600) {
+                    return 'Usa un valor entre 5 y 600.';
+                  }
+                  return null;
                 },
               ),
               const SizedBox(height: 10),
@@ -834,12 +889,23 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
                       : 'Hora ${_selectedTime!.format(context)}',
                 ),
               ),
-              if (_selectedTime != null) ...[
+              if (_selectedDate != null) ...[
                 const SizedBox(height: 6),
-                TextButton.icon(
-                  onPressed: _clearTime,
-                  icon: const Icon(Icons.close),
-                  label: const Text('Quitar hora'),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  children: [
+                    TextButton.icon(
+                      onPressed: _clearTime,
+                      icon: const Icon(Icons.schedule_send_outlined),
+                      label: const Text('Quitar hora'),
+                    ),
+                    TextButton.icon(
+                      onPressed: _clearDateTime,
+                      icon: const Icon(Icons.close),
+                      label: const Text('Quitar fecha'),
+                    ),
+                  ],
                 ),
               ],
             ],
