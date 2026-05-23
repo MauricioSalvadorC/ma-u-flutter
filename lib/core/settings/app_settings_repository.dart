@@ -2,11 +2,38 @@ import 'package:flutter/material.dart';
 
 import '../../data/database/app_database.dart';
 
+enum ExpenseBudgetPeriod {
+  weekly('Semanal'),
+  monthly('Mensual');
+
+  const ExpenseBudgetPeriod(this.label);
+
+  final String label;
+}
+
+enum GradeScale {
+  zeroToFive('0 a 5', 5),
+  zeroToTen('0 a 10', 10),
+  zeroToHundred('0 a 100', 100);
+
+  const GradeScale(this.label, this.maxValue);
+
+  final String label;
+  final int maxValue;
+}
+
 class AppSettingsRepository {
   const AppSettingsRepository(this._database);
 
   static const _themeModeKey = 'theme_mode';
   static const _seedColorKey = 'seed_color';
+  static const _onboardingCompletedKey = 'onboarding_completed';
+  static const _expenseBudgetCentsKey = 'expense_budget_cents';
+  static const _expenseBudgetPeriodKey = 'expense_budget_period';
+  static const _gradeScaleKey = 'grade_scale';
+  static const _universityNameKey = 'university_name';
+  static const _careerNameKey = 'career_name';
+  static const _currentSemesterKey = 'current_semester';
 
   final AppDatabase _database;
 
@@ -26,6 +53,47 @@ class AppSettingsRepository {
     return colorValue == null ? null : Color(colorValue);
   }
 
+  Future<bool> getOnboardingCompleted() async {
+    final value = await _database.settingsDao.getValue(_onboardingCompletedKey);
+    return value == 'true';
+  }
+
+  Future<int?> getExpenseBudgetCents() async {
+    final value = await _database.settingsDao.getValue(_expenseBudgetCentsKey);
+    return int.tryParse(value ?? '');
+  }
+
+  Future<ExpenseBudgetPeriod?> getExpenseBudgetPeriod() async {
+    final value = await _database.settingsDao.getValue(_expenseBudgetPeriodKey);
+    return switch (value) {
+      'weekly' => ExpenseBudgetPeriod.weekly,
+      'monthly' => ExpenseBudgetPeriod.monthly,
+      _ => null,
+    };
+  }
+
+  Future<GradeScale?> getGradeScale() async {
+    final value = await _database.settingsDao.getValue(_gradeScaleKey);
+    return switch (value) {
+      'zeroToFive' => GradeScale.zeroToFive,
+      'zeroToTen' => GradeScale.zeroToTen,
+      'zeroToHundred' => GradeScale.zeroToHundred,
+      _ => null,
+    };
+  }
+
+  Future<String> getUniversityName() async {
+    return await _database.settingsDao.getValue(_universityNameKey) ?? '';
+  }
+
+  Future<String> getCareerName() async {
+    return await _database.settingsDao.getValue(_careerNameKey) ?? '';
+  }
+
+  Future<String> getCurrentSemester() async {
+    return await _database.settingsDao.getValue(_currentSemesterKey) ?? '';
+  }
+
   Future<void> setThemeMode(ThemeMode themeMode) {
     return _database.settingsDao.setValue(
       key: _themeModeKey,
@@ -37,6 +105,53 @@ class AppSettingsRepository {
     return _database.settingsDao.setValue(
       key: _seedColorKey,
       value: color.toARGB32().toString(),
+    );
+  }
+
+  Future<void> setOnboardingCompleted(bool completed) {
+    return _database.settingsDao.setValue(
+      key: _onboardingCompletedKey,
+      value: completed.toString(),
+    );
+  }
+
+  Future<void> setExpenseBudget({
+    required int cents,
+    required ExpenseBudgetPeriod period,
+  }) async {
+    await _database.settingsDao.setValue(
+      key: _expenseBudgetCentsKey,
+      value: cents.toString(),
+    );
+    await _database.settingsDao.setValue(
+      key: _expenseBudgetPeriodKey,
+      value: period.name,
+    );
+  }
+
+  Future<void> setGradeScale(GradeScale scale) {
+    return _database.settingsDao.setValue(
+      key: _gradeScaleKey,
+      value: scale.name,
+    );
+  }
+
+  Future<void> setAcademicProfile({
+    required String universityName,
+    required String careerName,
+    required String currentSemester,
+  }) async {
+    await _database.settingsDao.setValue(
+      key: _universityNameKey,
+      value: universityName,
+    );
+    await _database.settingsDao.setValue(
+      key: _careerNameKey,
+      value: careerName,
+    );
+    await _database.settingsDao.setValue(
+      key: _currentSemesterKey,
+      value: currentSemester,
     );
   }
 }

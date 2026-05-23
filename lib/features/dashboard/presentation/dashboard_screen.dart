@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/formatters/app_date_formatter.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/widgets/app_detail_bottom_sheet.dart';
+import '../../../core/widgets/ma_u_brand.dart';
 import '../../../data/database/app_database_provider.dart';
 import '../../academic_goals/presentation/academic_goals_screen.dart';
 import '../../academic_record/presentation/academic_record_screen.dart';
@@ -374,22 +375,7 @@ class _AppTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: Image.asset(
-            'assets/logo/ma_u_logo_3.png',
-            width: 30,
-            height: 30,
-            fit: BoxFit.contain,
-          ),
-        ),
-        const SizedBox(width: 10),
-        const Text('Ma-U'),
-      ],
-    );
+    return const MaUBrand();
   }
 }
 

@@ -10,18 +10,22 @@ class AppSettingsController extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   Color _seedColor = AppPalette.defaultColor;
   bool _isLoaded = false;
+  bool _onboardingCompleted = false;
 
   ThemeMode get themeMode => _themeMode;
   Color get seedColor => _seedColor;
   bool get isLoaded => _isLoaded;
+  bool get onboardingCompleted => _onboardingCompleted;
   AppColorOption get selectedColor => AppPalette.optionFor(_seedColor);
 
   Future<void> load() async {
     final savedThemeMode = await _repository.getThemeMode();
     final savedSeedColor = await _repository.getSeedColor();
+    final onboardingCompleted = await _repository.getOnboardingCompleted();
 
     _themeMode = savedThemeMode ?? _themeMode;
     _seedColor = savedSeedColor ?? _seedColor;
+    _onboardingCompleted = onboardingCompleted;
     _isLoaded = true;
     notifyListeners();
   }
@@ -45,6 +49,12 @@ class AppSettingsController extends ChangeNotifier {
     notifyListeners();
     await _repository.setSeedColor(seedColor);
   }
+
+  Future<void> completeOnboarding() async {
+    _onboardingCompleted = true;
+    notifyListeners();
+    await _repository.setOnboardingCompleted(true);
+  }
 }
 
 class AppPalette {
@@ -66,6 +76,12 @@ class AppPalette {
       gradientEnd: Color(0xFF38BDF8),
     ),
     AppColorOption(
+      name: 'Marino',
+      color: Color(0xFF1D4ED8),
+      gradientStart: Color(0xFF172554),
+      gradientEnd: Color(0xFF60A5FA),
+    ),
+    AppColorOption(
       name: 'Cielo',
       color: Color(0xFF0284C7),
       gradientStart: Color(0xFF075985),
@@ -76,6 +92,12 @@ class AppPalette {
       color: Color(0xFF4F46E5),
       gradientStart: Color(0xFF312E81),
       gradientEnd: Color(0xFF818CF8),
+    ),
+    AppColorOption(
+      name: 'Lavanda',
+      color: Color(0xFF8B5CF6),
+      gradientStart: Color(0xFF4C1D95),
+      gradientEnd: Color(0xFFC4B5FD),
     ),
     AppColorOption(
       name: 'Violeta',
@@ -96,6 +118,12 @@ class AppPalette {
       gradientEnd: Color(0xFFF9A8D4),
     ),
     AppColorOption(
+      name: 'Sandia',
+      color: Color(0xFFE11D48),
+      gradientStart: Color(0xFF881337),
+      gradientEnd: Color(0xFFFB7185),
+    ),
+    AppColorOption(
       name: 'Rosa',
       color: Color(0xFFBE123C),
       gradientStart: Color(0xFF701A32),
@@ -108,16 +136,34 @@ class AppPalette {
       gradientEnd: Color(0xFFF87171),
     ),
     AppColorOption(
+      name: 'Granate',
+      color: Color(0xFF991B1B),
+      gradientStart: Color(0xFF450A0A),
+      gradientEnd: Color(0xFFEF4444),
+    ),
+    AppColorOption(
       name: 'Coral',
       color: Color(0xFFDC6B19),
       gradientStart: Color(0xFF7C2D12),
       gradientEnd: Color(0xFFF97316),
     ),
     AppColorOption(
+      name: 'Naranja',
+      color: Color(0xFFEA580C),
+      gradientStart: Color(0xFF7C2D12),
+      gradientEnd: Color(0xFFFB923C),
+    ),
+    AppColorOption(
       name: 'Ambar',
       color: Color(0xFFD97706),
       gradientStart: Color(0xFF78350F),
       gradientEnd: Color(0xFFFBBF24),
+    ),
+    AppColorOption(
+      name: 'Oro',
+      color: Color(0xFFCA8A04),
+      gradientStart: Color(0xFF713F12),
+      gradientEnd: Color(0xFFFDE047),
     ),
     AppColorOption(
       name: 'Lima',
@@ -138,10 +184,28 @@ class AppPalette {
       gradientEnd: Color(0xFF4ADE80),
     ),
     AppColorOption(
+      name: 'Esmeralda',
+      color: Color(0xFF059669),
+      gradientStart: Color(0xFF064E3B),
+      gradientEnd: Color(0xFF34D399),
+    ),
+    AppColorOption(
+      name: 'Petroleo',
+      color: Color(0xFF0E7490),
+      gradientStart: Color(0xFF164E63),
+      gradientEnd: Color(0xFF22D3EE),
+    ),
+    AppColorOption(
       name: 'Grafito',
       color: Color(0xFF475569),
       gradientStart: Color(0xFF0F172A),
       gradientEnd: Color(0xFF94A3B8),
+    ),
+    AppColorOption(
+      name: 'Pizarra',
+      color: Color(0xFF334155),
+      gradientStart: Color(0xFF020617),
+      gradientEnd: Color(0xFF64748B),
     ),
     AppColorOption(
       name: 'Carbon',

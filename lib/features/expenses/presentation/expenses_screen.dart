@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/formatters/app_date_formatter.dart';
 import '../../../core/formatters/money_formatter.dart';
+import '../../../core/settings/app_settings_repository.dart';
 import '../../../core/widgets/app_detail_bottom_sheet.dart';
 import '../../../core/widgets/destructive_confirmation_dialog.dart';
 import '../../../data/database/app_database_provider.dart';
@@ -16,51 +17,55 @@ class ExpensesScreen extends StatefulWidget {
 }
 
 class _ExpensesScreenState extends State<ExpensesScreen> {
-  static const _budgetKey = 'monthly_expense_budget_cents';
-
   late final ExpenseRepository _expenseRepository;
+  late final AppSettingsRepository _settingsRepository;
   ExpenseCategory? _selectedCategory;
-  int _monthlyBudgetCents = 60000000;
+  int _budgetCents = 15000000;
+  ExpenseBudgetPeriod _budgetPeriod = ExpenseBudgetPeriod.weekly;
 
   @override
   void initState() {
     super.initState();
     final database = AppDatabaseProvider.instance;
     _expenseRepository = ExpenseRepository(database);
+    _settingsRepository = AppSettingsRepository(database);
     _loadBudget();
   }
 
   Future<void> _loadBudget() async {
-    final value = await AppDatabaseProvider.instance.settingsDao.getValue(
-      _budgetKey,
-    );
-    final budget = int.tryParse(value ?? '');
-    if (budget != null && mounted) {
+    final budget = await _settingsRepository.getExpenseBudgetCents();
+    final period = await _settingsRepository.getExpenseBudgetPeriod();
+    if (mounted) {
       setState(() {
-        _monthlyBudgetCents = budget;
+        _budgetCents = budget ?? _budgetCents;
+        _budgetPeriod = period ?? _budgetPeriod;
       });
     }
   }
 
-  Future<void> _saveBudget(int cents) async {
-    await AppDatabaseProvider.instance.settingsDao.setValue(
-      key: _budgetKey,
-      value: cents.toString(),
+  Future<void> _saveBudget(_BudgetConfig config) async {
+    await _settingsRepository.setExpenseBudget(
+      cents: config.cents,
+      period: config.period,
     );
     if (mounted) {
       setState(() {
-        _monthlyBudgetCents = cents;
+        _budgetCents = config.cents;
+        _budgetPeriod = config.period;
       });
     }
   }
 
   Future<void> _openBudgetForm() async {
-    final cents = await showDialog<int>(
+    final config = await showDialog<_BudgetConfig>(
       context: context,
-      builder: (_) => _BudgetDialog(initialCents: _monthlyBudgetCents),
+      builder: (_) => _BudgetDialog(
+        initialCents: _budgetCents,
+        initialPeriod: _budgetPeriod,
+      ),
     );
-    if (cents != null) {
-      await _saveBudget(cents);
+    if (config != null) {
+      await _saveBudget(config);
     }
   }
 
@@ -101,7 +106,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         final expenses = snapshot.data ?? const <UniversityExpense>[];
         return _ExpensesView(
           expenses: expenses,
-          monthlyBudgetCents: _monthlyBudgetCents,
+          budgetCents: _budgetCents,
+          budgetPeriod: _budgetPeriod,
           selectedCategory: _selectedCategory,
           onBudgetTap: _openBudgetForm,
           onAddExpense: () => _openExpenseForm(),
@@ -121,7 +127,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 class _ExpensesView extends StatelessWidget {
   const _ExpensesView({
     required this.expenses,
-    required this.monthlyBudgetCents,
+    required this.budgetCents,
+    required this.budgetPeriod,
     required this.selectedCategory,
     required this.onBudgetTap,
     required this.onAddExpense,
@@ -131,7 +138,8 @@ class _ExpensesView extends StatelessWidget {
   });
 
   final List<UniversityExpense> expenses;
-  final int monthlyBudgetCents;
+  final int budgetCents;
+  final ExpenseBudgetPeriod budgetPeriod;
   final ExpenseCategory? selectedCategory;
   final VoidCallback onBudgetTap;
   final VoidCallback onAddExpense;
@@ -142,14 +150,13 @@ class _ExpensesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final monthExpenses = expenses.where((expense) {
-      return expense.spentAt.year == now.year &&
-          expense.spentAt.month == now.month;
+    final periodExpenses = expenses.where((expense) {
+      return _isInBudgetPeriod(expense.spentAt, now, budgetPeriod);
     }).toList();
-    final filteredExpenses = monthExpenses.where((expense) {
+    final filteredExpenses = periodExpenses.where((expense) {
       return selectedCategory == null || expense.category == selectedCategory;
     }).toList();
-    final spentCents = monthExpenses.fold<int>(
+    final spentCents = periodExpenses.fold<int>(
       0,
       (total, expense) => total + expense.amountCents,
     );
@@ -167,17 +174,21 @@ class _ExpensesView extends StatelessWidget {
           children: [
             _ExpenseSummaryCard(
               spentCents: spentCents,
-              budgetCents: monthlyBudgetCents,
+              budgetCents: budgetCents,
+              budgetPeriod: budgetPeriod,
               onBudgetTap: onBudgetTap,
             ),
             const SizedBox(height: 16),
             _CategoryFilterBar(
               selectedCategory: selectedCategory,
-              expenses: monthExpenses,
+              expenses: periodExpenses,
               onSelected: onSelectCategory,
             ),
             const SizedBox(height: 16),
-            _CategoryBreakdown(expenses: monthExpenses),
+            _CategoryBreakdown(
+              expenses: periodExpenses,
+              budgetPeriod: budgetPeriod,
+            ),
             const SizedBox(height: 16),
             if (filteredExpenses.isEmpty)
               const _EmptyExpensesCard()
@@ -195,17 +206,36 @@ class _ExpensesView extends StatelessWidget {
       ),
     );
   }
+
+  bool _isInBudgetPeriod(
+    DateTime value,
+    DateTime now,
+    ExpenseBudgetPeriod period,
+  ) {
+    if (period == ExpenseBudgetPeriod.monthly) {
+      return value.year == now.year && value.month == now.month;
+    }
+
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final startOfWeek = startOfToday.subtract(
+      Duration(days: startOfToday.weekday - DateTime.monday),
+    );
+    final endOfWeek = startOfWeek.add(const Duration(days: 7));
+    return !value.isBefore(startOfWeek) && value.isBefore(endOfWeek);
+  }
 }
 
 class _ExpenseSummaryCard extends StatelessWidget {
   const _ExpenseSummaryCard({
     required this.spentCents,
     required this.budgetCents,
+    required this.budgetPeriod,
     required this.onBudgetTap,
   });
 
   final int spentCents;
   final int budgetCents;
+  final ExpenseBudgetPeriod budgetPeriod;
   final VoidCallback onBudgetTap;
 
   @override
@@ -246,9 +276,9 @@ class _ExpenseSummaryCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Presupuesto mensual',
-                          style: TextStyle(
+                        Text(
+                          'Presupuesto ${budgetPeriod.label.toLowerCase()}',
+                          style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w900,
                           ),
@@ -324,9 +354,13 @@ class _CategoryFilterBar extends StatelessWidget {
 }
 
 class _CategoryBreakdown extends StatelessWidget {
-  const _CategoryBreakdown({required this.expenses});
+  const _CategoryBreakdown({
+    required this.expenses,
+    required this.budgetPeriod,
+  });
 
   final List<UniversityExpense> expenses;
+  final ExpenseBudgetPeriod budgetPeriod;
 
   @override
   Widget build(BuildContext context) {
@@ -354,7 +388,7 @@ class _CategoryBreakdown extends StatelessWidget {
             const SizedBox(height: 10),
             if (visibleTotals.isEmpty)
               Text(
-                'Aun no hay gastos este mes.',
+                'Aun no hay gastos en este periodo.',
                 style: TextStyle(color: colorScheme.onSurfaceVariant),
               )
             else
@@ -796,9 +830,13 @@ class _ExpenseFormDialogState extends State<_ExpenseFormDialog> {
 }
 
 class _BudgetDialog extends StatefulWidget {
-  const _BudgetDialog({required this.initialCents});
+  const _BudgetDialog({
+    required this.initialCents,
+    required this.initialPeriod,
+  });
 
   final int initialCents;
+  final ExpenseBudgetPeriod initialPeriod;
 
   @override
   State<_BudgetDialog> createState() => _BudgetDialogState();
@@ -806,6 +844,7 @@ class _BudgetDialog extends StatefulWidget {
 
 class _BudgetDialogState extends State<_BudgetDialog> {
   late final TextEditingController _controller;
+  late ExpenseBudgetPeriod _period;
 
   @override
   void initState() {
@@ -813,6 +852,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
     _controller = TextEditingController(
       text: (widget.initialCents / 100).toStringAsFixed(0),
     );
+    _period = widget.initialPeriod;
   }
 
   @override
@@ -826,17 +866,43 @@ class _BudgetDialogState extends State<_BudgetDialog> {
     if (cents == null || cents <= 0) {
       return;
     }
-    Navigator.of(context).pop(cents);
+    Navigator.of(context).pop(_BudgetConfig(cents: cents, period: _period));
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Presupuesto mensual'),
-      content: TextField(
-        controller: _controller,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: const InputDecoration(labelText: 'Monto'),
+      title: const Text('Presupuesto'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SegmentedButton<ExpenseBudgetPeriod>(
+            segments: const [
+              ButtonSegment(
+                value: ExpenseBudgetPeriod.weekly,
+                icon: Icon(Icons.view_week_outlined),
+                label: Text('Semanal'),
+              ),
+              ButtonSegment(
+                value: ExpenseBudgetPeriod.monthly,
+                icon: Icon(Icons.calendar_month_outlined),
+                label: Text('Mensual'),
+              ),
+            ],
+            selected: {_period},
+            onSelectionChanged: (selection) {
+              setState(() {
+                _period = selection.first;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Monto'),
+          ),
+        ],
       ),
       actions: [
         TextButton(
@@ -847,6 +913,13 @@ class _BudgetDialogState extends State<_BudgetDialog> {
       ],
     );
   }
+}
+
+class _BudgetConfig {
+  const _BudgetConfig({required this.cents, required this.period});
+
+  final int cents;
+  final ExpenseBudgetPeriod period;
 }
 
 enum _ExpenseAction { view, edit, delete }
