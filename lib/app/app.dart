@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../core/settings/app_settings_controller.dart';
+import '../core/settings/app_settings_repository.dart';
 import '../core/theme/app_theme.dart';
+import '../data/database/app_database_provider.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 
 class UniversityCompanionApp extends StatefulWidget {
@@ -12,7 +14,16 @@ class UniversityCompanionApp extends StatefulWidget {
 }
 
 class _UniversityCompanionAppState extends State<UniversityCompanionApp> {
-  final _settingsController = AppSettingsController();
+  late final AppSettingsController _settingsController;
+
+  @override
+  void initState() {
+    super.initState();
+    _settingsController = AppSettingsController(
+      repository: AppSettingsRepository(AppDatabaseProvider.instance),
+    );
+    _settingsController.load();
+  }
 
   @override
   void dispose() {

@@ -3080,6 +3080,595 @@ class SemesterCoursesCompanion extends UpdateCompanion<SemesterCourseRow> {
   }
 }
 
+class $AppSettingsEntriesTable extends AppSettingsEntries
+    with TableInfo<$AppSettingsEntriesTable, AppSettingRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AppSettingsEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [key, value];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'app_settings_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AppSettingRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  AppSettingRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AppSettingRow(
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      )!,
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value'],
+      )!,
+    );
+  }
+
+  @override
+  $AppSettingsEntriesTable createAlias(String alias) {
+    return $AppSettingsEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class AppSettingRow extends DataClass implements Insertable<AppSettingRow> {
+  final String key;
+  final String value;
+  const AppSettingRow({required this.key, required this.value});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['value'] = Variable<String>(value);
+    return map;
+  }
+
+  AppSettingsEntriesCompanion toCompanion(bool nullToAbsent) {
+    return AppSettingsEntriesCompanion(key: Value(key), value: Value(value));
+  }
+
+  factory AppSettingRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AppSettingRow(
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<String>(json['value']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<String>(value),
+    };
+  }
+
+  AppSettingRow copyWith({String? key, String? value}) =>
+      AppSettingRow(key: key ?? this.key, value: value ?? this.value);
+  AppSettingRow copyWithCompanion(AppSettingsEntriesCompanion data) {
+    return AppSettingRow(
+      key: data.key.present ? data.key.value : this.key,
+      value: data.value.present ? data.value.value : this.value,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSettingRow(')
+          ..write('key: $key, ')
+          ..write('value: $value')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, value);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AppSettingRow &&
+          other.key == this.key &&
+          other.value == this.value);
+}
+
+class AppSettingsEntriesCompanion extends UpdateCompanion<AppSettingRow> {
+  final Value<String> key;
+  final Value<String> value;
+  final Value<int> rowid;
+  const AppSettingsEntriesCompanion({
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AppSettingsEntriesCompanion.insert({
+    required String key,
+    required String value,
+    this.rowid = const Value.absent(),
+  }) : key = Value(key),
+       value = Value(value);
+  static Insertable<AppSettingRow> custom({
+    Expression<String>? key,
+    Expression<String>? value,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AppSettingsEntriesCompanion copyWith({
+    Value<String>? key,
+    Value<String>? value,
+    Value<int>? rowid,
+  }) {
+    return AppSettingsEntriesCompanion(
+      key: key ?? this.key,
+      value: value ?? this.value,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSettingsEntriesCompanion(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AcademicGoalsTable extends AcademicGoals
+    with TableInfo<$AcademicGoalsTable, AcademicGoalRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AcademicGoalsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetAverageMeta = const VerificationMeta(
+    'targetAverage',
+  );
+  @override
+  late final GeneratedColumn<double> targetAverage = GeneratedColumn<double>(
+    'target_average',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _plannedCreditsMeta = const VerificationMeta(
+    'plannedCredits',
+  );
+  @override
+  late final GeneratedColumn<int> plannedCredits = GeneratedColumn<int>(
+    'planned_credits',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _expectedAverageMeta = const VerificationMeta(
+    'expectedAverage',
+  );
+  @override
+  late final GeneratedColumn<double> expectedAverage = GeneratedColumn<double>(
+    'expected_average',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    targetAverage,
+    plannedCredits,
+    expectedAverage,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'academic_goals';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AcademicGoalRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('target_average')) {
+      context.handle(
+        _targetAverageMeta,
+        targetAverage.isAcceptableOrUnknown(
+          data['target_average']!,
+          _targetAverageMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_targetAverageMeta);
+    }
+    if (data.containsKey('planned_credits')) {
+      context.handle(
+        _plannedCreditsMeta,
+        plannedCredits.isAcceptableOrUnknown(
+          data['planned_credits']!,
+          _plannedCreditsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_plannedCreditsMeta);
+    }
+    if (data.containsKey('expected_average')) {
+      context.handle(
+        _expectedAverageMeta,
+        expectedAverage.isAcceptableOrUnknown(
+          data['expected_average']!,
+          _expectedAverageMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_expectedAverageMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AcademicGoalRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AcademicGoalRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      targetAverage: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}target_average'],
+      )!,
+      plannedCredits: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}planned_credits'],
+      )!,
+      expectedAverage: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}expected_average'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AcademicGoalsTable createAlias(String alias) {
+    return $AcademicGoalsTable(attachedDatabase, alias);
+  }
+}
+
+class AcademicGoalRow extends DataClass implements Insertable<AcademicGoalRow> {
+  final String id;
+  final double targetAverage;
+  final int plannedCredits;
+  final double expectedAverage;
+  final DateTime createdAt;
+  const AcademicGoalRow({
+    required this.id,
+    required this.targetAverage,
+    required this.plannedCredits,
+    required this.expectedAverage,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['target_average'] = Variable<double>(targetAverage);
+    map['planned_credits'] = Variable<int>(plannedCredits);
+    map['expected_average'] = Variable<double>(expectedAverage);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  AcademicGoalsCompanion toCompanion(bool nullToAbsent) {
+    return AcademicGoalsCompanion(
+      id: Value(id),
+      targetAverage: Value(targetAverage),
+      plannedCredits: Value(plannedCredits),
+      expectedAverage: Value(expectedAverage),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory AcademicGoalRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AcademicGoalRow(
+      id: serializer.fromJson<String>(json['id']),
+      targetAverage: serializer.fromJson<double>(json['targetAverage']),
+      plannedCredits: serializer.fromJson<int>(json['plannedCredits']),
+      expectedAverage: serializer.fromJson<double>(json['expectedAverage']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'targetAverage': serializer.toJson<double>(targetAverage),
+      'plannedCredits': serializer.toJson<int>(plannedCredits),
+      'expectedAverage': serializer.toJson<double>(expectedAverage),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  AcademicGoalRow copyWith({
+    String? id,
+    double? targetAverage,
+    int? plannedCredits,
+    double? expectedAverage,
+    DateTime? createdAt,
+  }) => AcademicGoalRow(
+    id: id ?? this.id,
+    targetAverage: targetAverage ?? this.targetAverage,
+    plannedCredits: plannedCredits ?? this.plannedCredits,
+    expectedAverage: expectedAverage ?? this.expectedAverage,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  AcademicGoalRow copyWithCompanion(AcademicGoalsCompanion data) {
+    return AcademicGoalRow(
+      id: data.id.present ? data.id.value : this.id,
+      targetAverage: data.targetAverage.present
+          ? data.targetAverage.value
+          : this.targetAverage,
+      plannedCredits: data.plannedCredits.present
+          ? data.plannedCredits.value
+          : this.plannedCredits,
+      expectedAverage: data.expectedAverage.present
+          ? data.expectedAverage.value
+          : this.expectedAverage,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AcademicGoalRow(')
+          ..write('id: $id, ')
+          ..write('targetAverage: $targetAverage, ')
+          ..write('plannedCredits: $plannedCredits, ')
+          ..write('expectedAverage: $expectedAverage, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    targetAverage,
+    plannedCredits,
+    expectedAverage,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AcademicGoalRow &&
+          other.id == this.id &&
+          other.targetAverage == this.targetAverage &&
+          other.plannedCredits == this.plannedCredits &&
+          other.expectedAverage == this.expectedAverage &&
+          other.createdAt == this.createdAt);
+}
+
+class AcademicGoalsCompanion extends UpdateCompanion<AcademicGoalRow> {
+  final Value<String> id;
+  final Value<double> targetAverage;
+  final Value<int> plannedCredits;
+  final Value<double> expectedAverage;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const AcademicGoalsCompanion({
+    this.id = const Value.absent(),
+    this.targetAverage = const Value.absent(),
+    this.plannedCredits = const Value.absent(),
+    this.expectedAverage = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AcademicGoalsCompanion.insert({
+    required String id,
+    required double targetAverage,
+    required int plannedCredits,
+    required double expectedAverage,
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       targetAverage = Value(targetAverage),
+       plannedCredits = Value(plannedCredits),
+       expectedAverage = Value(expectedAverage);
+  static Insertable<AcademicGoalRow> custom({
+    Expression<String>? id,
+    Expression<double>? targetAverage,
+    Expression<int>? plannedCredits,
+    Expression<double>? expectedAverage,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (targetAverage != null) 'target_average': targetAverage,
+      if (plannedCredits != null) 'planned_credits': plannedCredits,
+      if (expectedAverage != null) 'expected_average': expectedAverage,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AcademicGoalsCompanion copyWith({
+    Value<String>? id,
+    Value<double>? targetAverage,
+    Value<int>? plannedCredits,
+    Value<double>? expectedAverage,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return AcademicGoalsCompanion(
+      id: id ?? this.id,
+      targetAverage: targetAverage ?? this.targetAverage,
+      plannedCredits: plannedCredits ?? this.plannedCredits,
+      expectedAverage: expectedAverage ?? this.expectedAverage,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (targetAverage.present) {
+      map['target_average'] = Variable<double>(targetAverage.value);
+    }
+    if (plannedCredits.present) {
+      map['planned_credits'] = Variable<int>(plannedCredits.value);
+    }
+    if (expectedAverage.present) {
+      map['expected_average'] = Variable<double>(expectedAverage.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AcademicGoalsCompanion(')
+          ..write('id: $id, ')
+          ..write('targetAverage: $targetAverage, ')
+          ..write('plannedCredits: $plannedCredits, ')
+          ..write('expectedAverage: $expectedAverage, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3093,6 +3682,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SemesterCoursesTable semesterCourses = $SemesterCoursesTable(
     this,
   );
+  late final $AppSettingsEntriesTable appSettingsEntries =
+      $AppSettingsEntriesTable(this);
+  late final $AcademicGoalsTable academicGoals = $AcademicGoalsTable(this);
   late final SubjectsDao subjectsDao = SubjectsDao(this as AppDatabase);
   late final ScheduleDao scheduleDao = ScheduleDao(this as AppDatabase);
   late final TasksDao tasksDao = TasksDao(this as AppDatabase);
@@ -3100,6 +3692,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final SemestersDao semestersDao = SemestersDao(this as AppDatabase);
+  late final SettingsDao settingsDao = SettingsDao(this as AppDatabase);
+  late final AcademicGoalsDao academicGoalsDao = AcademicGoalsDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3111,6 +3707,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     studySessions,
     semesters,
     semesterCourses,
+    appSettingsEntries,
+    academicGoals,
   ];
 }
 
@@ -5571,6 +6169,364 @@ typedef $$SemesterCoursesTableProcessedTableManager =
       SemesterCourseRow,
       PrefetchHooks Function({bool semesterId})
     >;
+typedef $$AppSettingsEntriesTableCreateCompanionBuilder =
+    AppSettingsEntriesCompanion Function({
+      required String key,
+      required String value,
+      Value<int> rowid,
+    });
+typedef $$AppSettingsEntriesTableUpdateCompanionBuilder =
+    AppSettingsEntriesCompanion Function({
+      Value<String> key,
+      Value<String> value,
+      Value<int> rowid,
+    });
+
+class $$AppSettingsEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $AppSettingsEntriesTable> {
+  $$AppSettingsEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AppSettingsEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $AppSettingsEntriesTable> {
+  $$AppSettingsEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AppSettingsEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AppSettingsEntriesTable> {
+  $$AppSettingsEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+}
+
+class $$AppSettingsEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AppSettingsEntriesTable,
+          AppSettingRow,
+          $$AppSettingsEntriesTableFilterComposer,
+          $$AppSettingsEntriesTableOrderingComposer,
+          $$AppSettingsEntriesTableAnnotationComposer,
+          $$AppSettingsEntriesTableCreateCompanionBuilder,
+          $$AppSettingsEntriesTableUpdateCompanionBuilder,
+          (
+            AppSettingRow,
+            BaseReferences<
+              _$AppDatabase,
+              $AppSettingsEntriesTable,
+              AppSettingRow
+            >,
+          ),
+          AppSettingRow,
+          PrefetchHooks Function()
+        > {
+  $$AppSettingsEntriesTableTableManager(
+    _$AppDatabase db,
+    $AppSettingsEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AppSettingsEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AppSettingsEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AppSettingsEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> key = const Value.absent(),
+                Value<String> value = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AppSettingsEntriesCompanion(
+                key: key,
+                value: value,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String key,
+                required String value,
+                Value<int> rowid = const Value.absent(),
+              }) => AppSettingsEntriesCompanion.insert(
+                key: key,
+                value: value,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AppSettingsEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AppSettingsEntriesTable,
+      AppSettingRow,
+      $$AppSettingsEntriesTableFilterComposer,
+      $$AppSettingsEntriesTableOrderingComposer,
+      $$AppSettingsEntriesTableAnnotationComposer,
+      $$AppSettingsEntriesTableCreateCompanionBuilder,
+      $$AppSettingsEntriesTableUpdateCompanionBuilder,
+      (
+        AppSettingRow,
+        BaseReferences<_$AppDatabase, $AppSettingsEntriesTable, AppSettingRow>,
+      ),
+      AppSettingRow,
+      PrefetchHooks Function()
+    >;
+typedef $$AcademicGoalsTableCreateCompanionBuilder =
+    AcademicGoalsCompanion Function({
+      required String id,
+      required double targetAverage,
+      required int plannedCredits,
+      required double expectedAverage,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$AcademicGoalsTableUpdateCompanionBuilder =
+    AcademicGoalsCompanion Function({
+      Value<String> id,
+      Value<double> targetAverage,
+      Value<int> plannedCredits,
+      Value<double> expectedAverage,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$AcademicGoalsTableFilterComposer
+    extends Composer<_$AppDatabase, $AcademicGoalsTable> {
+  $$AcademicGoalsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get targetAverage => $composableBuilder(
+    column: $table.targetAverage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get plannedCredits => $composableBuilder(
+    column: $table.plannedCredits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get expectedAverage => $composableBuilder(
+    column: $table.expectedAverage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AcademicGoalsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AcademicGoalsTable> {
+  $$AcademicGoalsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get targetAverage => $composableBuilder(
+    column: $table.targetAverage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get plannedCredits => $composableBuilder(
+    column: $table.plannedCredits,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get expectedAverage => $composableBuilder(
+    column: $table.expectedAverage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AcademicGoalsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AcademicGoalsTable> {
+  $$AcademicGoalsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<double> get targetAverage => $composableBuilder(
+    column: $table.targetAverage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get plannedCredits => $composableBuilder(
+    column: $table.plannedCredits,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get expectedAverage => $composableBuilder(
+    column: $table.expectedAverage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$AcademicGoalsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AcademicGoalsTable,
+          AcademicGoalRow,
+          $$AcademicGoalsTableFilterComposer,
+          $$AcademicGoalsTableOrderingComposer,
+          $$AcademicGoalsTableAnnotationComposer,
+          $$AcademicGoalsTableCreateCompanionBuilder,
+          $$AcademicGoalsTableUpdateCompanionBuilder,
+          (
+            AcademicGoalRow,
+            BaseReferences<_$AppDatabase, $AcademicGoalsTable, AcademicGoalRow>,
+          ),
+          AcademicGoalRow,
+          PrefetchHooks Function()
+        > {
+  $$AcademicGoalsTableTableManager(_$AppDatabase db, $AcademicGoalsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AcademicGoalsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AcademicGoalsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AcademicGoalsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<double> targetAverage = const Value.absent(),
+                Value<int> plannedCredits = const Value.absent(),
+                Value<double> expectedAverage = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AcademicGoalsCompanion(
+                id: id,
+                targetAverage: targetAverage,
+                plannedCredits: plannedCredits,
+                expectedAverage: expectedAverage,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required double targetAverage,
+                required int plannedCredits,
+                required double expectedAverage,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AcademicGoalsCompanion.insert(
+                id: id,
+                targetAverage: targetAverage,
+                plannedCredits: plannedCredits,
+                expectedAverage: expectedAverage,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AcademicGoalsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AcademicGoalsTable,
+      AcademicGoalRow,
+      $$AcademicGoalsTableFilterComposer,
+      $$AcademicGoalsTableOrderingComposer,
+      $$AcademicGoalsTableAnnotationComposer,
+      $$AcademicGoalsTableCreateCompanionBuilder,
+      $$AcademicGoalsTableUpdateCompanionBuilder,
+      (
+        AcademicGoalRow,
+        BaseReferences<_$AppDatabase, $AcademicGoalsTable, AcademicGoalRow>,
+      ),
+      AcademicGoalRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5587,6 +6543,10 @@ class $AppDatabaseManager {
       $$SemestersTableTableManager(_db, _db.semesters);
   $$SemesterCoursesTableTableManager get semesterCourses =>
       $$SemesterCoursesTableTableManager(_db, _db.semesterCourses);
+  $$AppSettingsEntriesTableTableManager get appSettingsEntries =>
+      $$AppSettingsEntriesTableTableManager(_db, _db.appSettingsEntries);
+  $$AcademicGoalsTableTableManager get academicGoals =>
+      $$AcademicGoalsTableTableManager(_db, _db.academicGoals);
 }
 
 mixin _$SubjectsDaoMixin on DatabaseAccessor<AppDatabase> {
@@ -5665,4 +6625,32 @@ class SemestersDaoManager {
         _db.attachedDatabase,
         _db.semesterCourses,
       );
+}
+
+mixin _$SettingsDaoMixin on DatabaseAccessor<AppDatabase> {
+  $AppSettingsEntriesTable get appSettingsEntries =>
+      attachedDatabase.appSettingsEntries;
+  SettingsDaoManager get managers => SettingsDaoManager(this);
+}
+
+class SettingsDaoManager {
+  final _$SettingsDaoMixin _db;
+  SettingsDaoManager(this._db);
+  $$AppSettingsEntriesTableTableManager get appSettingsEntries =>
+      $$AppSettingsEntriesTableTableManager(
+        _db.attachedDatabase,
+        _db.appSettingsEntries,
+      );
+}
+
+mixin _$AcademicGoalsDaoMixin on DatabaseAccessor<AppDatabase> {
+  $AcademicGoalsTable get academicGoals => attachedDatabase.academicGoals;
+  AcademicGoalsDaoManager get managers => AcademicGoalsDaoManager(this);
+}
+
+class AcademicGoalsDaoManager {
+  final _$AcademicGoalsDaoMixin _db;
+  AcademicGoalsDaoManager(this._db);
+  $$AcademicGoalsTableTableManager get academicGoals =>
+      $$AcademicGoalsTableTableManager(_db.attachedDatabase, _db.academicGoals);
 }

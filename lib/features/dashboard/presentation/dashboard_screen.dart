@@ -4,6 +4,7 @@ import '../../../core/formatters/app_date_formatter.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/widgets/app_detail_bottom_sheet.dart';
 import '../../../data/database/app_database_provider.dart';
+import '../../academic_goals/presentation/academic_goals_screen.dart';
 import '../../academic_record/presentation/academic_record_screen.dart';
 import '../../exam_week/presentation/exam_week_screen.dart';
 import '../../grades/presentation/grade_calculator_screen.dart';
@@ -132,6 +133,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: 'Gastos',
         subtitle: 'Transporte, comida, copias y presupuesto mensual.',
         color: Color(0xFFDC6B19),
+      ),
+      _DashboardModule(
+        icon: Icons.track_changes_outlined,
+        title: 'Metas academicas',
+        subtitle: 'Objetivo de promedio y simulacion de avance.',
+        color: const Color(0xFF4F46E5),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const AcademicGoalsScreen(),
+            ),
+          );
+        },
       ),
     ];
 
@@ -868,7 +882,7 @@ class _RoadmapPanel extends StatelessWidget {
     'Control de parciales',
     'Lista de materias',
     'Notas por semestre',
-    'Metas academicas',
+    'Gastos universitarios',
   ];
 
   @override

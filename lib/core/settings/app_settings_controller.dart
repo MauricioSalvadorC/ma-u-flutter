@@ -1,29 +1,49 @@
 import 'package:flutter/material.dart';
 
+import 'app_settings_repository.dart';
+
 class AppSettingsController extends ChangeNotifier {
+  AppSettingsController({required AppSettingsRepository repository})
+    : _repository = repository;
+
+  final AppSettingsRepository _repository;
   ThemeMode _themeMode = ThemeMode.system;
   Color _seedColor = AppPalette.defaultColor;
+  bool _isLoaded = false;
 
   ThemeMode get themeMode => _themeMode;
   Color get seedColor => _seedColor;
+  bool get isLoaded => _isLoaded;
   AppColorOption get selectedColor => AppPalette.optionFor(_seedColor);
 
-  void setThemeMode(ThemeMode themeMode) {
+  Future<void> load() async {
+    final savedThemeMode = await _repository.getThemeMode();
+    final savedSeedColor = await _repository.getSeedColor();
+
+    _themeMode = savedThemeMode ?? _themeMode;
+    _seedColor = savedSeedColor ?? _seedColor;
+    _isLoaded = true;
+    notifyListeners();
+  }
+
+  Future<void> setThemeMode(ThemeMode themeMode) async {
     if (_themeMode == themeMode) {
       return;
     }
 
     _themeMode = themeMode;
     notifyListeners();
+    await _repository.setThemeMode(themeMode);
   }
 
-  void setSeedColor(Color seedColor) {
+  Future<void> setSeedColor(Color seedColor) async {
     if (_seedColor == seedColor) {
       return;
     }
 
     _seedColor = seedColor;
     notifyListeners();
+    await _repository.setSeedColor(seedColor);
   }
 }
 

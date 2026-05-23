@@ -1,8 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+part '../daos/academic_goals_dao.dart';
 part '../daos/schedule_dao.dart';
 part '../daos/semesters_dao.dart';
+part '../daos/settings_dao.dart';
 part '../daos/study_sessions_dao.dart';
 part '../daos/subjects_dao.dart';
 part '../daos/tasks_dao.dart';
@@ -86,6 +88,27 @@ class SemesterCourses extends Table {
   DateTimeColumn get deletedAt => dateTime().nullable()();
 }
 
+@DataClassName('AppSettingRow')
+class AppSettingsEntries extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {key};
+}
+
+@DataClassName('AcademicGoalRow')
+class AcademicGoals extends Table {
+  TextColumn get id => text()();
+  RealColumn get targetAverage => real()();
+  IntColumn get plannedCredits => integer()();
+  RealColumn get expectedAverage => real()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     Subjects,
@@ -94,15 +117,25 @@ class SemesterCourses extends Table {
     StudySessions,
     Semesters,
     SemesterCourses,
+    AppSettingsEntries,
+    AcademicGoals,
   ],
-  daos: [SubjectsDao, ScheduleDao, TasksDao, StudySessionsDao, SemestersDao],
+  daos: [
+    SubjectsDao,
+    ScheduleDao,
+    TasksDao,
+    StudySessionsDao,
+    SemestersDao,
+    SettingsDao,
+    AcademicGoalsDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
     : super(executor ?? driftDatabase(name: 'ma_u.sqlite'));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -124,6 +157,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 6) {
           await migrator.createTable(semesters);
           await migrator.createTable(semesterCourses);
+        }
+        if (from < 7) {
+          await migrator.createTable(appSettingsEntries);
+          await migrator.createTable(academicGoals);
         }
       },
     );
