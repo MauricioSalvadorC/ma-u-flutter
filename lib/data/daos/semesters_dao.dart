@@ -23,6 +23,20 @@ class SemestersDao extends DatabaseAccessor<AppDatabase>
         .watch();
   }
 
+  Stream<List<SemesterRow>> watchDeletedSemesters() {
+    return (select(semesters)
+          ..where((table) => table.deletedAt.isNotNull())
+          ..orderBy([(table) => OrderingTerm.desc(table.deletedAt)]))
+        .watch();
+  }
+
+  Stream<List<SemesterCourseRow>> watchDeletedCourses() {
+    return (select(semesterCourses)
+          ..where((table) => table.deletedAt.isNotNull())
+          ..orderBy([(table) => OrderingTerm.desc(table.deletedAt)]))
+        .watch();
+  }
+
   Future<void> upsertSemester(SemestersCompanion semester) {
     return into(semesters).insertOnConflictUpdate(semester);
   }
@@ -51,6 +65,21 @@ class SemestersDao extends DatabaseAccessor<AppDatabase>
   Future<bool> moveCourseToTrash(int id) {
     return (update(semesterCourses)..where((table) => table.id.equals(id)))
         .write(SemesterCoursesCompanion(deletedAt: Value(DateTime.now())))
+        .then((rows) => rows > 0);
+  }
+
+  Future<bool> restoreSemester(String id) async {
+    await (update(semesterCourses)
+          ..where((table) => table.semesterId.equals(id)))
+        .write(const SemesterCoursesCompanion(deletedAt: Value(null)));
+    return (update(semesters)..where((table) => table.id.equals(id)))
+        .write(const SemestersCompanion(deletedAt: Value(null)))
+        .then((rows) => rows > 0);
+  }
+
+  Future<bool> restoreCourse(int id) {
+    return (update(semesterCourses)..where((table) => table.id.equals(id)))
+        .write(const SemesterCoursesCompanion(deletedAt: Value(null)))
         .then((rows) => rows > 0);
   }
 }

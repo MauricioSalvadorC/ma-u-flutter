@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/formatters/app_date_formatter.dart';
 import '../../../core/formatters/money_formatter.dart';
 import '../../../data/database/app_database_provider.dart';
+import '../../academic_record/data/academic_record_repository.dart';
 import '../../expenses/data/expense_repository.dart';
 import '../../expenses/domain/university_expense.dart';
 import '../../schedule/data/academic_seed_service.dart';
@@ -28,7 +29,10 @@ class _TrashScreenState extends State<TrashScreen> {
   late final TaskRepository _taskRepository;
   late final StudySessionRepository _studyRepository;
   late final ExpenseRepository _expenseRepository;
+  late final AcademicRecordRepository _recordRepository;
   late final Future<void> _seedFuture;
+  _TrashFilter _filter = _TrashFilter.all;
+  String _query = '';
 
   @override
   void initState() {
@@ -39,50 +43,11 @@ class _TrashScreenState extends State<TrashScreen> {
     _taskRepository = TaskRepository(database);
     _studyRepository = StudySessionRepository(database);
     _expenseRepository = ExpenseRepository(database);
+    _recordRepository = AcademicRecordRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
     ).seedIfNeeded();
-  }
-
-  Future<void> _restoreTask(AcademicTask task) async {
-    final id = task.id;
-    if (id == null) {
-      return;
-    }
-
-    await _taskRepository.restoreTask(id);
-  }
-
-  Future<void> _restoreSubject(Subject subject) async {
-    await _subjectRepository.restoreSubject(subject.id);
-  }
-
-  Future<void> _restoreSession(ClassSession session) async {
-    final id = session.id;
-    if (id == null) {
-      return;
-    }
-
-    await _scheduleRepository.restoreSession(id);
-  }
-
-  Future<void> _restoreStudySession(StudySession session) async {
-    final id = session.id;
-    if (id == null) {
-      return;
-    }
-
-    await _studyRepository.restoreSession(id);
-  }
-
-  Future<void> _restoreExpense(UniversityExpense expense) async {
-    final id = expense.id;
-    if (id == null) {
-      return;
-    }
-
-    await _expenseRepository.restoreExpense(id);
   }
 
   @override
@@ -100,7 +65,6 @@ class _TrashScreenState extends State<TrashScreen> {
           stream: _subjectRepository.watchSubjects(),
           builder: (context, subjectSnapshot) {
             final subjects = subjectSnapshot.data ?? const <Subject>[];
-
             return StreamBuilder<List<AcademicTask>>(
               stream: _taskRepository.watchDeletedTasks(),
               builder: (context, taskSnapshot) {
@@ -110,7 +74,6 @@ class _TrashScreenState extends State<TrashScreen> {
                   builder: (context, deletedSubjectSnapshot) {
                     final deletedSubjects =
                         deletedSubjectSnapshot.data ?? const <Subject>[];
-
                     return StreamBuilder<List<ClassSession>>(
                       stream: _scheduleRepository.watchDeletedSessions(),
                       builder: (context, deletedSessionSnapshot) {
@@ -129,18 +92,48 @@ class _TrashScreenState extends State<TrashScreen> {
                                 final deletedExpenses =
                                     deletedExpenseSnapshot.data ??
                                     const <UniversityExpense>[];
-                                return _TrashView(
-                                  subjects: subjects,
-                                  tasks: tasks,
-                                  deletedSubjects: deletedSubjects,
-                                  deletedSessions: deletedSessions,
-                                  deletedStudySessions: deletedStudySessions,
-                                  deletedExpenses: deletedExpenses,
-                                  onRestoreTask: _restoreTask,
-                                  onRestoreSubject: _restoreSubject,
-                                  onRestoreSession: _restoreSession,
-                                  onRestoreStudySession: _restoreStudySession,
-                                  onRestoreExpense: _restoreExpense,
+                                return StreamBuilder(
+                                  stream: _recordRepository
+                                      .watchDeletedSemesters(),
+                                  builder: (context, semesterSnapshot) {
+                                    final deletedSemesters =
+                                        semesterSnapshot.data ?? const [];
+                                    return StreamBuilder(
+                                      stream: _recordRepository
+                                          .watchDeletedCourses(),
+                                      builder: (context, courseSnapshot) {
+                                        final deletedCourses =
+                                            courseSnapshot.data ?? const [];
+                                        final items = _buildItems(
+                                          subjects: subjects,
+                                          tasks: tasks,
+                                          deletedSubjects: deletedSubjects,
+                                          deletedSessions: deletedSessions,
+                                          deletedStudySessions:
+                                              deletedStudySessions,
+                                          deletedExpenses: deletedExpenses,
+                                          deletedSemesters: deletedSemesters,
+                                          deletedCourses: deletedCourses,
+                                        );
+
+                                        return _TrashView(
+                                          items: items,
+                                          filter: _filter,
+                                          query: _query,
+                                          onFilterChanged: (filter) {
+                                            setState(() {
+                                              _filter = filter;
+                                            });
+                                          },
+                                          onQueryChanged: (query) {
+                                            setState(() {
+                                              _query = query;
+                                            });
+                                          },
+                                        );
+                                      },
+                                    );
+                                  },
                                 );
                               },
                             );
@@ -157,130 +150,248 @@ class _TrashScreenState extends State<TrashScreen> {
       },
     );
   }
+
+  List<_TrashItemData> _buildItems({
+    required List<Subject> subjects,
+    required List<AcademicTask> tasks,
+    required List<Subject> deletedSubjects,
+    required List<ClassSession> deletedSessions,
+    required List<StudySession> deletedStudySessions,
+    required List<UniversityExpense> deletedExpenses,
+    required List<dynamic> deletedSemesters,
+    required List<dynamic> deletedCourses,
+  }) {
+    final items = <_TrashItemData>[];
+
+    for (final subject in deletedSubjects) {
+      items.add(
+        _TrashItemData(
+          type: _TrashFilter.subjects,
+          icon: Icons.menu_book_outlined,
+          title: subject.name,
+          subtitle: _deletedSubtitle('Materia', subject.deletedAt),
+          searchText: subject.name,
+          onRestore: () => _subjectRepository.restoreSubject(subject.id),
+        ),
+      );
+    }
+
+    for (final session in deletedSessions) {
+      final subject = _subjectFor(subjects, session.subjectId);
+      items.add(
+        _TrashItemData(
+          type: _TrashFilter.schedule,
+          icon: Icons.calendar_month_outlined,
+          title: subject.name,
+          subtitle: _deletedSubtitle(
+            'Clase ${session.timeRange}',
+            session.deletedAt,
+          ),
+          searchText: '${subject.name} ${session.location}',
+          onRestore: () {
+            final id = session.id;
+            return id == null
+                ? Future<void>.value()
+                : _scheduleRepository.restoreSession(id);
+          },
+        ),
+      );
+    }
+
+    for (final studySession in deletedStudySessions) {
+      final subject = _subjectFor(subjects, studySession.subjectId);
+      items.add(
+        _TrashItemData(
+          type: _TrashFilter.study,
+          icon: Icons.psychology_alt_outlined,
+          title: studySession.title,
+          subtitle: _deletedSubtitle(subject.name, studySession.deletedAt),
+          searchText:
+              '${studySession.title} ${studySession.notes} ${subject.name}',
+          onRestore: () {
+            final id = studySession.id;
+            return id == null
+                ? Future<void>.value()
+                : _studyRepository.restoreSession(id);
+          },
+        ),
+      );
+    }
+
+    for (final task in tasks) {
+      final subject = _subjectFor(subjects, task.subjectId);
+      items.add(
+        _TrashItemData(
+          type: _TrashFilter.tasks,
+          icon: Icons.task_alt_outlined,
+          title: task.title,
+          subtitle: _deletedSubtitle(subject.name, task.deletedAt),
+          searchText: '${task.title} ${task.description} ${subject.name}',
+          onRestore: () {
+            final id = task.id;
+            return id == null
+                ? Future<void>.value()
+                : _taskRepository.restoreTask(id);
+          },
+        ),
+      );
+    }
+
+    for (final expense in deletedExpenses) {
+      items.add(
+        _TrashItemData(
+          type: _TrashFilter.expenses,
+          icon: Icons.account_balance_wallet_outlined,
+          title: expense.title,
+          subtitle: _deletedSubtitle(
+            MoneyFormatter.pesos(expense.amountCents),
+            expense.deletedAt,
+          ),
+          searchText:
+              '${expense.title} ${expense.note} ${expense.category.label}',
+          onRestore: () {
+            final id = expense.id;
+            return id == null
+                ? Future<void>.value()
+                : _expenseRepository.restoreExpense(id);
+          },
+        ),
+      );
+    }
+
+    for (final semester in deletedSemesters) {
+      items.add(
+        _TrashItemData(
+          type: _TrashFilter.record,
+          icon: Icons.school_outlined,
+          title: semester.name as String,
+          subtitle: _deletedSubtitle(
+            'Semestre',
+            semester.deletedAt as DateTime?,
+          ),
+          searchText: '${semester.name} ${semester.year}',
+          onRestore: () =>
+              _recordRepository.restoreSemester(semester.id as String),
+        ),
+      );
+    }
+
+    for (final course in deletedCourses) {
+      items.add(
+        _TrashItemData(
+          type: _TrashFilter.record,
+          icon: Icons.grade_outlined,
+          title: course.name as String,
+          subtitle: _deletedSubtitle(
+            '${course.credits} cr - ${(course.finalGrade as double).toStringAsFixed(2)}',
+            course.deletedAt as DateTime?,
+          ),
+          searchText: '${course.name} ${course.credits} ${course.finalGrade}',
+          onRestore: () {
+            final id = course.id as int?;
+            return id == null
+                ? Future<void>.value()
+                : _recordRepository.restoreCourse(id);
+          },
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  Subject _subjectFor(List<Subject> subjects, String id) {
+    return subjects.firstWhere(
+      (subject) => subject.id == id,
+      orElse: () => const Subject(
+        id: 'unknown',
+        name: 'Materia',
+        teacher: '',
+        room: '',
+        credits: 0,
+        accentColorValue: 0xFF64748B,
+      ),
+    );
+  }
+
+  String _deletedSubtitle(String base, DateTime? deletedAt) {
+    if (deletedAt == null) {
+      return base;
+    }
+    return '$base - ${AppDateFormatter.dateTime(deletedAt)}';
+  }
 }
 
 class _TrashView extends StatelessWidget {
   const _TrashView({
-    required this.subjects,
-    required this.tasks,
-    required this.deletedSubjects,
-    required this.deletedSessions,
-    required this.deletedStudySessions,
-    required this.deletedExpenses,
-    required this.onRestoreTask,
-    required this.onRestoreSubject,
-    required this.onRestoreSession,
-    required this.onRestoreStudySession,
-    required this.onRestoreExpense,
+    required this.items,
+    required this.filter,
+    required this.query,
+    required this.onFilterChanged,
+    required this.onQueryChanged,
   });
 
-  final List<Subject> subjects;
-  final List<AcademicTask> tasks;
-  final List<Subject> deletedSubjects;
-  final List<ClassSession> deletedSessions;
-  final List<StudySession> deletedStudySessions;
-  final List<UniversityExpense> deletedExpenses;
-  final ValueChanged<AcademicTask> onRestoreTask;
-  final ValueChanged<Subject> onRestoreSubject;
-  final ValueChanged<ClassSession> onRestoreSession;
-  final ValueChanged<StudySession> onRestoreStudySession;
-  final ValueChanged<UniversityExpense> onRestoreExpense;
+  final List<_TrashItemData> items;
+  final _TrashFilter filter;
+  final String query;
+  final ValueChanged<_TrashFilter> onFilterChanged;
+  final ValueChanged<String> onQueryChanged;
 
   @override
   Widget build(BuildContext context) {
+    final filteredItems = items.where(_matches).toList();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Papelera')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const _TrashHeader(),
+            _TrashHeader(total: items.length),
             const SizedBox(height: 16),
-            if (tasks.isEmpty &&
-                deletedSubjects.isEmpty &&
-                deletedSessions.isEmpty &&
-                deletedStudySessions.isEmpty &&
-                deletedExpenses.isEmpty)
+            TextField(
+              onChanged: onQueryChanged,
+              decoration: const InputDecoration(
+                hintText: 'Buscar en papelera',
+                prefixIcon: Icon(Icons.search),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _TrashFilterBar(
+              selected: filter,
+              items: items,
+              onSelected: onFilterChanged,
+            ),
+            const SizedBox(height: 16),
+            if (filteredItems.isEmpty)
               const _EmptyTrashCard()
-            else ...[
-              for (final subject in deletedSubjects) ...[
-                _DeletedSubjectCard(
-                  subject: subject,
-                  onRestore: () => onRestoreSubject(subject),
-                ),
+            else
+              for (final item in filteredItems) ...[
+                _TrashItemCard(item: item),
                 const SizedBox(height: 10),
               ],
-              for (final session in deletedSessions) ...[
-                _DeletedSessionCard(
-                  session: session,
-                  subject: subjects.firstWhere(
-                    (subject) => subject.id == session.subjectId,
-                    orElse: () => const Subject(
-                      id: 'unknown',
-                      name: 'Materia',
-                      teacher: '',
-                      room: '',
-                      credits: 0,
-                      accentColorValue: 0xFF64748B,
-                    ),
-                  ),
-                  onRestore: () => onRestoreSession(session),
-                ),
-                const SizedBox(height: 10),
-              ],
-              for (final studySession in deletedStudySessions) ...[
-                _DeletedStudySessionCard(
-                  session: studySession,
-                  subject: subjects.firstWhere(
-                    (subject) => subject.id == studySession.subjectId,
-                    orElse: () => const Subject(
-                      id: 'unknown',
-                      name: 'Materia',
-                      teacher: '',
-                      room: '',
-                      credits: 0,
-                      accentColorValue: 0xFF64748B,
-                    ),
-                  ),
-                  onRestore: () => onRestoreStudySession(studySession),
-                ),
-                const SizedBox(height: 10),
-              ],
-              for (final task in tasks) ...[
-                _DeletedTaskCard(
-                  task: task,
-                  subject: subjects.firstWhere(
-                    (subject) => subject.id == task.subjectId,
-                    orElse: () => const Subject(
-                      id: 'unknown',
-                      name: 'Materia',
-                      teacher: '',
-                      room: '',
-                      credits: 0,
-                      accentColorValue: 0xFF64748B,
-                    ),
-                  ),
-                  onRestore: () => onRestoreTask(task),
-                ),
-                const SizedBox(height: 10),
-              ],
-              for (final expense in deletedExpenses) ...[
-                _DeletedExpenseCard(
-                  expense: expense,
-                  onRestore: () => onRestoreExpense(expense),
-                ),
-                const SizedBox(height: 10),
-              ],
-            ],
           ],
         ),
       ),
     );
   }
+
+  bool _matches(_TrashItemData item) {
+    final filterMatches = filter == _TrashFilter.all || item.type == filter;
+    final queryText = query.trim().toLowerCase();
+    final queryMatches =
+        queryText.isEmpty ||
+        '${item.title} ${item.subtitle} ${item.searchText}'
+            .toLowerCase()
+            .contains(queryText);
+    return filterMatches && queryMatches;
+  }
 }
 
 class _TrashHeader extends StatelessWidget {
-  const _TrashHeader();
+  const _TrashHeader({required this.total});
+
+  final int total;
 
   @override
   Widget build(BuildContext context) {
@@ -304,18 +415,16 @@ class _TrashHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Recupera informacion',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Lo que borres queda aqui antes de desaparecer del todo.',
-                  ),
+                  const SizedBox(height: 4),
+                  Text('$total elementos disponibles para restaurar.'),
                 ],
               ),
             ),
@@ -323,6 +432,44 @@ class _TrashHeader extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _TrashFilterBar extends StatelessWidget {
+  const _TrashFilterBar({
+    required this.selected,
+    required this.items,
+    required this.onSelected,
+  });
+
+  final _TrashFilter selected;
+  final List<_TrashItemData> items;
+  final ValueChanged<_TrashFilter> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final filter in _TrashFilter.values) ...[
+            ChoiceChip(
+              label: Text('${filter.label} (${_count(filter)})'),
+              selected: selected == filter,
+              onSelected: (_) => onSelected(filter),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
+  int _count(_TrashFilter filter) {
+    if (filter == _TrashFilter.all) {
+      return items.length;
+    }
+    return items.where((item) => item.type == filter).length;
   }
 }
 
@@ -345,12 +492,12 @@ class _EmptyTrashCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'Papelera vacia',
+              'Sin resultados',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 4),
             Text(
-              'Cuando borres elementos importantes, apareceran aqui para restaurarlos.',
+              'No hay elementos para el filtro o busqueda actual.',
               textAlign: TextAlign.center,
               style: TextStyle(color: colorScheme.onSurfaceVariant),
             ),
@@ -361,35 +508,30 @@ class _EmptyTrashCard extends StatelessWidget {
   }
 }
 
-class _DeletedTaskCard extends StatelessWidget {
-  const _DeletedTaskCard({
-    required this.task,
-    required this.subject,
-    required this.onRestore,
-  });
+class _TrashItemCard extends StatelessWidget {
+  const _TrashItemCard({required this.item});
 
-  final AcademicTask task;
-  final Subject subject;
-  final VoidCallback onRestore;
+  final _TrashItemData item;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final deletedAt = task.deletedAt;
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            Icon(Icons.task_alt_outlined, color: colorScheme.primary),
+            Icon(item.icon, color: colorScheme.primary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    task.title,
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
@@ -397,18 +539,23 @@ class _DeletedTaskCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    deletedAt == null
-                        ? subject.name
-                        : '${subject.name} - ${AppDateFormatter.dateTime(deletedAt)}',
+                    item.subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
             ),
-            TextButton.icon(
-              onPressed: onRestore,
-              icon: const Icon(Icons.restore_outlined),
-              label: const Text('Restaurar'),
+            PopupMenuButton<_TrashAction>(
+              tooltip: 'Opciones',
+              onSelected: (_) => item.onRestore(),
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: _TrashAction.restore,
+                  child: Text('Restaurar'),
+                ),
+              ],
             ),
           ],
         ),
@@ -417,143 +564,36 @@ class _DeletedTaskCard extends StatelessWidget {
   }
 }
 
-class _DeletedSubjectCard extends StatelessWidget {
-  const _DeletedSubjectCard({required this.subject, required this.onRestore});
-
-  final Subject subject;
-  final VoidCallback onRestore;
-
-  @override
-  Widget build(BuildContext context) {
-    return _TrashItemCard(
-      icon: Icons.menu_book_outlined,
-      title: subject.name,
-      subtitle: subject.deletedAt == null
-          ? 'Materia'
-          : 'Materia - ${AppDateFormatter.dateTime(subject.deletedAt!)}',
-      onRestore: onRestore,
-    );
-  }
-}
-
-class _DeletedSessionCard extends StatelessWidget {
-  const _DeletedSessionCard({
-    required this.session,
-    required this.subject,
-    required this.onRestore,
-  });
-
-  final ClassSession session;
-  final Subject subject;
-  final VoidCallback onRestore;
-
-  @override
-  Widget build(BuildContext context) {
-    return _TrashItemCard(
-      icon: Icons.calendar_month_outlined,
-      title: subject.name,
-      subtitle: session.deletedAt == null
-          ? 'Clase'
-          : 'Clase - ${AppDateFormatter.dateTime(session.deletedAt!)}',
-      onRestore: onRestore,
-    );
-  }
-}
-
-class _DeletedStudySessionCard extends StatelessWidget {
-  const _DeletedStudySessionCard({
-    required this.session,
-    required this.subject,
-    required this.onRestore,
-  });
-
-  final StudySession session;
-  final Subject subject;
-  final VoidCallback onRestore;
-
-  @override
-  Widget build(BuildContext context) {
-    return _TrashItemCard(
-      icon: Icons.psychology_alt_outlined,
-      title: session.title,
-      subtitle: session.deletedAt == null
-          ? subject.name
-          : '${subject.name} - ${AppDateFormatter.dateTime(session.deletedAt!)}',
-      onRestore: onRestore,
-    );
-  }
-}
-
-class _DeletedExpenseCard extends StatelessWidget {
-  const _DeletedExpenseCard({required this.expense, required this.onRestore});
-
-  final UniversityExpense expense;
-  final VoidCallback onRestore;
-
-  @override
-  Widget build(BuildContext context) {
-    return _TrashItemCard(
-      icon: Icons.account_balance_wallet_outlined,
-      title: expense.title,
-      subtitle: expense.deletedAt == null
-          ? MoneyFormatter.pesos(expense.amountCents)
-          : '${MoneyFormatter.pesos(expense.amountCents)} - ${AppDateFormatter.dateTime(expense.deletedAt!)}',
-      onRestore: onRestore,
-    );
-  }
-}
-
-class _TrashItemCard extends StatelessWidget {
-  const _TrashItemCard({
+class _TrashItemData {
+  const _TrashItemData({
+    required this.type,
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.searchText,
     required this.onRestore,
   });
 
+  final _TrashFilter type;
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onRestore;
+  final String searchText;
+  final Future<void> Function() onRestore;
+}
 
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+enum _TrashAction { restore }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Icon(icon, color: colorScheme.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(color: colorScheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ),
-            TextButton.icon(
-              onPressed: onRestore,
-              icon: const Icon(Icons.restore_outlined),
-              label: const Text('Restaurar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+enum _TrashFilter {
+  all('Todo'),
+  subjects('Materias'),
+  schedule('Horario'),
+  tasks('Tareas'),
+  study('Estudio'),
+  expenses('Gastos'),
+  record('Historial');
+
+  const _TrashFilter(this.label);
+
+  final String label;
 }

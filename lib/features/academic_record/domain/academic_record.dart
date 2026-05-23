@@ -4,12 +4,14 @@ class AcademicSemester {
     required this.name,
     required this.year,
     required this.termIndex,
+    this.deletedAt,
   });
 
   final String id;
   final String name;
   final int year;
   final int termIndex;
+  final DateTime? deletedAt;
 }
 
 class SemesterCourse {
@@ -19,6 +21,7 @@ class SemesterCourse {
     required this.name,
     required this.credits,
     required this.finalGrade,
+    this.deletedAt,
   });
 
   final int? id;
@@ -26,6 +29,7 @@ class SemesterCourse {
   final String name;
   final int credits;
   final double finalGrade;
+  final DateTime? deletedAt;
 }
 
 class SemesterSummary {

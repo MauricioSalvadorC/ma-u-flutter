@@ -52,6 +52,18 @@ class AcademicRecordRepository {
     });
   }
 
+  Stream<List<AcademicSemester>> watchDeletedSemesters() {
+    return _database.semestersDao.watchDeletedSemesters().map(
+      (rows) => rows.map(_toSemester).toList(),
+    );
+  }
+
+  Stream<List<SemesterCourse>> watchDeletedCourses() {
+    return _database.semestersDao.watchDeletedCourses().map(
+      (rows) => rows.map(_toCourse).toList(),
+    );
+  }
+
   Future<void> saveSemester(AcademicSemester semester) {
     return _database.semestersDao.upsertSemester(
       SemestersCompanion(
@@ -88,12 +100,21 @@ class AcademicRecordRepository {
     return _database.semestersDao.moveCourseToTrash(id);
   }
 
+  Future<bool> restoreSemester(String id) {
+    return _database.semestersDao.restoreSemester(id);
+  }
+
+  Future<bool> restoreCourse(int id) {
+    return _database.semestersDao.restoreCourse(id);
+  }
+
   AcademicSemester _toSemester(SemesterRow row) {
     return AcademicSemester(
       id: row.id,
       name: row.name,
       year: row.year,
       termIndex: row.termIndex,
+      deletedAt: row.deletedAt,
     );
   }
 
@@ -104,6 +125,7 @@ class AcademicRecordRepository {
       name: row.name,
       credits: row.credits,
       finalGrade: row.finalGrade,
+      deletedAt: row.deletedAt,
     );
   }
 }
