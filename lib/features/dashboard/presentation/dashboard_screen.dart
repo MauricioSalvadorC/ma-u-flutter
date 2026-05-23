@@ -24,6 +24,7 @@ import '../../tasks/data/task_repository.dart';
 import '../../tasks/domain/academic_task.dart';
 import '../../tasks/presentation/tasks_screen.dart';
 import '../../trash/presentation/trash_screen.dart';
+import '../../weekly_calendar/presentation/weekly_calendar_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -67,6 +68,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) => const GradeCalculatorScreen(),
+            ),
+          );
+        },
+      ),
+      _DashboardModule(
+        icon: Icons.calendar_view_week_outlined,
+        title: 'Calendario semanal',
+        subtitle: 'Clases, tareas y estudio en una agenda unificada.',
+        color: const Color(0xFF0284C7),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const WeeklyCalendarScreen(),
             ),
           );
         },
