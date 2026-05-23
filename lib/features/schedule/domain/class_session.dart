@@ -20,6 +20,7 @@ class ClassSession {
     required this.startsAtMinute,
     required this.endsAtMinute,
     required this.location,
+    this.deletedAt,
   });
 
   final int? id;
@@ -28,6 +29,7 @@ class ClassSession {
   final int startsAtMinute;
   final int endsAtMinute;
   final String location;
+  final DateTime? deletedAt;
 
   ClassSession copyWith({
     int? id,
@@ -36,6 +38,7 @@ class ClassSession {
     int? startsAtMinute,
     int? endsAtMinute,
     String? location,
+    DateTime? deletedAt,
   }) {
     return ClassSession(
       id: id ?? this.id,
@@ -44,6 +47,7 @@ class ClassSession {
       startsAtMinute: startsAtMinute ?? this.startsAtMinute,
       endsAtMinute: endsAtMinute ?? this.endsAtMinute,
       location: location ?? this.location,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 

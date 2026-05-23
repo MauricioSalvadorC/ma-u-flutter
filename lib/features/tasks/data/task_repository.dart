@@ -21,6 +21,12 @@ class TaskRepository {
   }
 
   Future<int> saveTask(AcademicTask task) {
+    if (task.id != null) {
+      return _database.tasksDao
+          .updateTask(_toCompanion(task))
+          .then((_) => task.id!);
+    }
+
     return _database.tasksDao.insertTask(_toCompanion(task));
   }
 
@@ -51,6 +57,7 @@ class TaskRepository {
 
   AcademicTasksCompanion _toCompanion(AcademicTask task) {
     return AcademicTasksCompanion(
+      id: task.id == null ? const Value.absent() : Value(task.id!),
       subjectId: Value(task.subjectId),
       title: Value(task.title),
       description: Value(task.description.isEmpty ? null : task.description),

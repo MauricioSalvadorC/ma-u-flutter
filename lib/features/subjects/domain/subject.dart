@@ -6,6 +6,7 @@ class Subject {
     required this.room,
     required this.credits,
     required this.accentColorValue,
+    this.deletedAt,
   });
 
   final String id;
@@ -14,6 +15,7 @@ class Subject {
   final String room;
   final int credits;
   final int accentColorValue;
+  final DateTime? deletedAt;
 
   Subject copyWith({
     String? id,
@@ -22,6 +24,7 @@ class Subject {
     String? room,
     int? credits,
     int? accentColorValue,
+    DateTime? deletedAt,
   }) {
     return Subject(
       id: id ?? this.id,
@@ -30,6 +33,7 @@ class Subject {
       room: room ?? this.room,
       credits: credits ?? this.credits,
       accentColorValue: accentColorValue ?? this.accentColorValue,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 }

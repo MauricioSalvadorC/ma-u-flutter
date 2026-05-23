@@ -4,6 +4,7 @@ import '../../../core/formatters/app_date_formatter.dart';
 import '../../../data/database/app_database_provider.dart';
 import '../../schedule/data/academic_seed_service.dart';
 import '../../schedule/data/schedule_repository.dart';
+import '../../schedule/domain/class_session.dart';
 import '../../subjects/data/subject_repository.dart';
 import '../../subjects/domain/subject.dart';
 import '../../tasks/data/task_repository.dart';
@@ -44,6 +45,19 @@ class _TrashScreenState extends State<TrashScreen> {
     await _taskRepository.restoreTask(id);
   }
 
+  Future<void> _restoreSubject(Subject subject) async {
+    await _subjectRepository.restoreSubject(subject.id);
+  }
+
+  Future<void> _restoreSession(ClassSession session) async {
+    final id = session.id;
+    if (id == null) {
+      return;
+    }
+
+    await _scheduleRepository.restoreSession(id);
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<void>(
@@ -64,10 +78,30 @@ class _TrashScreenState extends State<TrashScreen> {
               stream: _taskRepository.watchDeletedTasks(),
               builder: (context, taskSnapshot) {
                 final tasks = taskSnapshot.data ?? const <AcademicTask>[];
-                return _TrashView(
-                  subjects: subjects,
-                  tasks: tasks,
-                  onRestoreTask: _restoreTask,
+                return StreamBuilder<List<Subject>>(
+                  stream: _subjectRepository.watchDeletedSubjects(),
+                  builder: (context, deletedSubjectSnapshot) {
+                    final deletedSubjects =
+                        deletedSubjectSnapshot.data ?? const <Subject>[];
+
+                    return StreamBuilder<List<ClassSession>>(
+                      stream: _scheduleRepository.watchDeletedSessions(),
+                      builder: (context, deletedSessionSnapshot) {
+                        final deletedSessions =
+                            deletedSessionSnapshot.data ??
+                            const <ClassSession>[];
+                        return _TrashView(
+                          subjects: subjects,
+                          tasks: tasks,
+                          deletedSubjects: deletedSubjects,
+                          deletedSessions: deletedSessions,
+                          onRestoreTask: _restoreTask,
+                          onRestoreSubject: _restoreSubject,
+                          onRestoreSession: _restoreSession,
+                        );
+                      },
+                    );
+                  },
                 );
               },
             );
@@ -82,12 +116,20 @@ class _TrashView extends StatelessWidget {
   const _TrashView({
     required this.subjects,
     required this.tasks,
+    required this.deletedSubjects,
+    required this.deletedSessions,
     required this.onRestoreTask,
+    required this.onRestoreSubject,
+    required this.onRestoreSession,
   });
 
   final List<Subject> subjects;
   final List<AcademicTask> tasks;
+  final List<Subject> deletedSubjects;
+  final List<ClassSession> deletedSessions;
   final ValueChanged<AcademicTask> onRestoreTask;
+  final ValueChanged<Subject> onRestoreSubject;
+  final ValueChanged<ClassSession> onRestoreSession;
 
   @override
   Widget build(BuildContext context) {
@@ -99,9 +141,36 @@ class _TrashView extends StatelessWidget {
           children: [
             const _TrashHeader(),
             const SizedBox(height: 16),
-            if (tasks.isEmpty)
+            if (tasks.isEmpty &&
+                deletedSubjects.isEmpty &&
+                deletedSessions.isEmpty)
               const _EmptyTrashCard()
-            else
+            else ...[
+              for (final subject in deletedSubjects) ...[
+                _DeletedSubjectCard(
+                  subject: subject,
+                  onRestore: () => onRestoreSubject(subject),
+                ),
+                const SizedBox(height: 10),
+              ],
+              for (final session in deletedSessions) ...[
+                _DeletedSessionCard(
+                  session: session,
+                  subject: subjects.firstWhere(
+                    (subject) => subject.id == session.subjectId,
+                    orElse: () => const Subject(
+                      id: 'unknown',
+                      name: 'Materia',
+                      teacher: '',
+                      room: '',
+                      credits: 0,
+                      accentColorValue: 0xFF64748B,
+                    ),
+                  ),
+                  onRestore: () => onRestoreSession(session),
+                ),
+                const SizedBox(height: 10),
+              ],
               for (final task in tasks) ...[
                 _DeletedTaskCard(
                   task: task,
@@ -120,6 +189,7 @@ class _TrashView extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
               ],
+            ],
           ],
         ),
       ),
@@ -248,6 +318,104 @@ class _DeletedTaskCard extends StatelessWidget {
                     deletedAt == null
                         ? subject.name
                         : '${subject.name} - ${AppDateFormatter.dateTime(deletedAt)}',
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            TextButton.icon(
+              onPressed: onRestore,
+              icon: const Icon(Icons.restore_outlined),
+              label: const Text('Restaurar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DeletedSubjectCard extends StatelessWidget {
+  const _DeletedSubjectCard({required this.subject, required this.onRestore});
+
+  final Subject subject;
+  final VoidCallback onRestore;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TrashItemCard(
+      icon: Icons.menu_book_outlined,
+      title: subject.name,
+      subtitle: subject.deletedAt == null
+          ? 'Materia'
+          : 'Materia - ${AppDateFormatter.dateTime(subject.deletedAt!)}',
+      onRestore: onRestore,
+    );
+  }
+}
+
+class _DeletedSessionCard extends StatelessWidget {
+  const _DeletedSessionCard({
+    required this.session,
+    required this.subject,
+    required this.onRestore,
+  });
+
+  final ClassSession session;
+  final Subject subject;
+  final VoidCallback onRestore;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TrashItemCard(
+      icon: Icons.calendar_month_outlined,
+      title: subject.name,
+      subtitle: session.deletedAt == null
+          ? 'Clase'
+          : 'Clase - ${AppDateFormatter.dateTime(session.deletedAt!)}',
+      onRestore: onRestore,
+    );
+  }
+}
+
+class _TrashItemCard extends StatelessWidget {
+  const _TrashItemCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onRestore,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onRestore;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Icon(icon, color: colorScheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
                     style: TextStyle(color: colorScheme.onSurfaceVariant),
                   ),
                 ],

@@ -36,10 +36,14 @@ class _TasksScreenState extends State<TasksScreen> {
     ).seedIfNeeded();
   }
 
-  Future<void> _openTaskForm(List<Subject> subjects) async {
+  Future<void> _openTaskForm(
+    List<Subject> subjects, {
+    AcademicTask? initialTask,
+  }) async {
     final task = await showDialog<AcademicTask>(
       context: context,
-      builder: (_) => _TaskFormDialog(subjects: subjects),
+      builder: (_) =>
+          _TaskFormDialog(subjects: subjects, initialTask: initialTask),
     );
 
     if (task != null) {
@@ -101,6 +105,8 @@ class _TasksScreenState extends State<TasksScreen> {
                   subjects: subjects,
                   tasks: tasks,
                   onAddTask: () => _openTaskForm(subjects),
+                  onEditTask: (task) =>
+                      _openTaskForm(subjects, initialTask: task),
                   onToggleTask: _toggleTask,
                   onDeleteTask: _deleteTask,
                 );
@@ -118,6 +124,7 @@ class _TasksView extends StatelessWidget {
     required this.subjects,
     required this.tasks,
     required this.onAddTask,
+    required this.onEditTask,
     required this.onToggleTask,
     required this.onDeleteTask,
   });
@@ -125,6 +132,7 @@ class _TasksView extends StatelessWidget {
   final List<Subject> subjects;
   final List<AcademicTask> tasks;
   final VoidCallback onAddTask;
+  final ValueChanged<AcademicTask> onEditTask;
   final ValueChanged<AcademicTask> onToggleTask;
   final ValueChanged<AcademicTask> onDeleteTask;
 
@@ -166,6 +174,7 @@ class _TasksView extends StatelessWidget {
                       accentColorValue: 0xFF64748B,
                     ),
                   ),
+                  onEdit: () => onEditTask(task),
                   onToggle: () => onToggleTask(task),
                   onDelete: () => onDeleteTask(task),
                 ),
@@ -266,12 +275,14 @@ class _TaskCard extends StatelessWidget {
   const _TaskCard({
     required this.task,
     required this.subject,
+    required this.onEdit,
     required this.onToggle,
     required this.onDelete,
   });
 
   final AcademicTask task;
   final Subject subject;
+  final VoidCallback onEdit;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
 
@@ -282,64 +293,209 @@ class _TaskCard extends StatelessWidget {
     final dueDate = task.dueDate;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Checkbox(value: task.isCompleted, onChanged: (_) => onToggle()),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      decoration: task.isCompleted
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                    ),
-                  ),
-                  if (task.description.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => _showTaskDetails(context),
+        onLongPress: () => _showTaskActions(context),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(value: task.isCompleted, onChanged: (_) => onToggle()),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      task.description,
-                      maxLines: 2,
+                      task.title,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        decoration: task.isCompleted
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                      ),
+                    ),
+                    if (task.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        task.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _TaskChip(label: subject.name, color: subjectColor),
+                        _TaskChip(
+                          label: task.priority.label,
+                          color: _priorityColor(task.priority),
+                        ),
+                        if (dueDate != null)
+                          _TaskChip(
+                            label: AppDateFormatter.dateWithOptionalTime(
+                              dueDate,
+                            ),
+                            color: colorScheme.primary,
+                          ),
+                      ],
                     ),
                   ],
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _TaskChip(label: subject.name, color: subjectColor),
-                      _TaskChip(
-                        label: task.priority.label,
-                        color: _priorityColor(task.priority),
-                      ),
-                      if (dueDate != null)
-                        _TaskChip(
-                          label: AppDateFormatter.dateWithOptionalTime(dueDate),
-                          color: colorScheme.primary,
-                        ),
-                    ],
+                ),
+              ),
+              PopupMenuButton<_TaskAction>(
+                tooltip: 'Opciones de tarea',
+                onSelected: (action) {
+                  switch (action) {
+                    case _TaskAction.view:
+                      _showTaskDetails(context);
+                    case _TaskAction.edit:
+                      onEdit();
+                    case _TaskAction.delete:
+                      onDelete();
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: _TaskAction.view,
+                    child: Text('Ver detalle'),
+                  ),
+                  PopupMenuItem(value: _TaskAction.edit, child: Text('Editar')),
+                  PopupMenuItem(
+                    value: _TaskAction.delete,
+                    child: Text('Mover a papelera'),
                   ),
                 ],
               ),
-            ),
-            IconButton(
-              tooltip: 'Eliminar tarea',
-              onPressed: onDelete,
-              icon: const Icon(Icons.delete_outline),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  void _showTaskDetails(BuildContext context) {
+    final dueDate = task.dueDate;
+    final deletedAt = task.deletedAt;
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 14),
+                _TaskDetailRow(label: 'Materia', value: subject.name),
+                _TaskDetailRow(label: 'Prioridad', value: task.priority.label),
+                _TaskDetailRow(
+                  label: 'Estado',
+                  value: task.isCompleted ? 'Completada' : 'Pendiente',
+                ),
+                if (dueDate != null)
+                  _TaskDetailRow(
+                    label: 'Fecha limite',
+                    value: AppDateFormatter.dateWithOptionalTime(dueDate),
+                  ),
+                if (task.description.isNotEmpty)
+                  _TaskDetailRow(label: 'Descripcion', value: task.description),
+                if (deletedAt != null)
+                  _TaskDetailRow(
+                    label: 'Movida a papelera',
+                    value: AppDateFormatter.dateTime(deletedAt),
+                  ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          onEdit();
+                        },
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Editar'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          onDelete();
+                        },
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Papelera'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showTaskActions(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.visibility_outlined),
+                  title: const Text('Ver detalle'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showTaskDetails(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Editar'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    onEdit();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline),
+                  title: const Text('Mover a papelera'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    onDelete();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -349,6 +505,39 @@ class _TaskCard extends StatelessWidget {
       TaskPriority.medium => const Color(0xFFD97706),
       TaskPriority.high => const Color(0xFFDC2626),
     };
+  }
+}
+
+enum _TaskAction { view, edit, delete }
+
+class _TaskDetailRow extends StatelessWidget {
+  const _TaskDetailRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
   }
 }
 
@@ -379,9 +568,10 @@ class _TaskChip extends StatelessWidget {
 }
 
 class _TaskFormDialog extends StatefulWidget {
-  const _TaskFormDialog({required this.subjects});
+  const _TaskFormDialog({required this.subjects, this.initialTask});
 
   final List<Subject> subjects;
+  final AcademicTask? initialTask;
 
   @override
   State<_TaskFormDialog> createState() => _TaskFormDialogState();
@@ -399,7 +589,22 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
   @override
   void initState() {
     super.initState();
-    _subjectId = widget.subjects.isEmpty ? '' : widget.subjects.first.id;
+    final task = widget.initialTask;
+    _subjectId =
+        task?.subjectId ??
+        (widget.subjects.isEmpty ? '' : widget.subjects.first.id);
+    if (task != null) {
+      _titleController.text = task.title;
+      _descriptionController.text = task.description;
+      _priority = task.priority;
+      final dueDate = task.dueDate;
+      if (dueDate != null) {
+        _selectedDate = dueDate;
+        if (dueDate.hour != 0 || dueDate.minute != 0) {
+          _selectedTime = TimeOfDay(hour: dueDate.hour, minute: dueDate.minute);
+        }
+      }
+    }
   }
 
   @override
@@ -467,13 +672,14 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
 
     Navigator.of(context).pop(
       AcademicTask(
+        id: widget.initialTask?.id,
         subjectId: _subjectId,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         dueDate: _buildDueDate(),
         priority: _priority,
-        isCompleted: false,
-        deletedAt: null,
+        isCompleted: widget.initialTask?.isCompleted ?? false,
+        deletedAt: widget.initialTask?.deletedAt,
       ),
     );
   }
@@ -494,7 +700,7 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
     }
 
     return AlertDialog(
-      title: const Text('Nueva tarea'),
+      title: Text(widget.initialTask == null ? 'Nueva tarea' : 'Editar tarea'),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(

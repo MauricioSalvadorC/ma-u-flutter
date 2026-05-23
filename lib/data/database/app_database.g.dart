@@ -81,6 +81,17 @@ class $SubjectsTable extends Subjects
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -90,6 +101,7 @@ class $SubjectsTable extends Subjects
     credits,
     accentColorValue,
     createdAt,
+    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -157,6 +169,12 @@ class $SubjectsTable extends Subjects
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -194,6 +212,10 @@ class $SubjectsTable extends Subjects
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
 
@@ -211,6 +233,7 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
   final int credits;
   final int accentColorValue;
   final DateTime createdAt;
+  final DateTime? deletedAt;
   const SubjectRow({
     required this.id,
     required this.name,
@@ -219,6 +242,7 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
     required this.credits,
     required this.accentColorValue,
     required this.createdAt,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -230,6 +254,9 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
     map['credits'] = Variable<int>(credits);
     map['accent_color_value'] = Variable<int>(accentColorValue);
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     return map;
   }
 
@@ -242,6 +269,9 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
       credits: Value(credits),
       accentColorValue: Value(accentColorValue),
       createdAt: Value(createdAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
     );
   }
 
@@ -258,6 +288,7 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
       credits: serializer.fromJson<int>(json['credits']),
       accentColorValue: serializer.fromJson<int>(json['accentColorValue']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -271,6 +302,7 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
       'credits': serializer.toJson<int>(credits),
       'accentColorValue': serializer.toJson<int>(accentColorValue),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -282,6 +314,7 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
     int? credits,
     int? accentColorValue,
     DateTime? createdAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
   }) => SubjectRow(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -290,6 +323,7 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
     credits: credits ?? this.credits,
     accentColorValue: accentColorValue ?? this.accentColorValue,
     createdAt: createdAt ?? this.createdAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   SubjectRow copyWithCompanion(SubjectsCompanion data) {
     return SubjectRow(
@@ -302,6 +336,7 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
           ? data.accentColorValue.value
           : this.accentColorValue,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -314,7 +349,8 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
           ..write('room: $room, ')
           ..write('credits: $credits, ')
           ..write('accentColorValue: $accentColorValue, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -328,6 +364,7 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
     credits,
     accentColorValue,
     createdAt,
+    deletedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -339,7 +376,8 @@ class SubjectRow extends DataClass implements Insertable<SubjectRow> {
           other.room == this.room &&
           other.credits == this.credits &&
           other.accentColorValue == this.accentColorValue &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.deletedAt == this.deletedAt);
 }
 
 class SubjectsCompanion extends UpdateCompanion<SubjectRow> {
@@ -350,6 +388,7 @@ class SubjectsCompanion extends UpdateCompanion<SubjectRow> {
   final Value<int> credits;
   final Value<int> accentColorValue;
   final Value<DateTime> createdAt;
+  final Value<DateTime?> deletedAt;
   final Value<int> rowid;
   const SubjectsCompanion({
     this.id = const Value.absent(),
@@ -359,6 +398,7 @@ class SubjectsCompanion extends UpdateCompanion<SubjectRow> {
     this.credits = const Value.absent(),
     this.accentColorValue = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SubjectsCompanion.insert({
@@ -369,6 +409,7 @@ class SubjectsCompanion extends UpdateCompanion<SubjectRow> {
     required int credits,
     required int accentColorValue,
     this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -384,6 +425,7 @@ class SubjectsCompanion extends UpdateCompanion<SubjectRow> {
     Expression<int>? credits,
     Expression<int>? accentColorValue,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? deletedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -394,6 +436,7 @@ class SubjectsCompanion extends UpdateCompanion<SubjectRow> {
       if (credits != null) 'credits': credits,
       if (accentColorValue != null) 'accent_color_value': accentColorValue,
       if (createdAt != null) 'created_at': createdAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -406,6 +449,7 @@ class SubjectsCompanion extends UpdateCompanion<SubjectRow> {
     Value<int>? credits,
     Value<int>? accentColorValue,
     Value<DateTime>? createdAt,
+    Value<DateTime?>? deletedAt,
     Value<int>? rowid,
   }) {
     return SubjectsCompanion(
@@ -416,6 +460,7 @@ class SubjectsCompanion extends UpdateCompanion<SubjectRow> {
       credits: credits ?? this.credits,
       accentColorValue: accentColorValue ?? this.accentColorValue,
       createdAt: createdAt ?? this.createdAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -444,6 +489,9 @@ class SubjectsCompanion extends UpdateCompanion<SubjectRow> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -460,6 +508,7 @@ class SubjectsCompanion extends UpdateCompanion<SubjectRow> {
           ..write('credits: $credits, ')
           ..write('accentColorValue: $accentColorValue, ')
           ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -555,6 +604,17 @@ class $ScheduleEntriesTable extends ScheduleEntries
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -564,6 +624,7 @@ class $ScheduleEntriesTable extends ScheduleEntries
     endsAtMinute,
     location,
     createdAt,
+    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -635,6 +696,12 @@ class $ScheduleEntriesTable extends ScheduleEntries
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -672,6 +739,10 @@ class $ScheduleEntriesTable extends ScheduleEntries
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
 
@@ -689,6 +760,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
   final int endsAtMinute;
   final String location;
   final DateTime createdAt;
+  final DateTime? deletedAt;
   const ScheduleRow({
     required this.id,
     required this.subjectId,
@@ -697,6 +769,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     required this.endsAtMinute,
     required this.location,
     required this.createdAt,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -708,6 +781,9 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     map['ends_at_minute'] = Variable<int>(endsAtMinute);
     map['location'] = Variable<String>(location);
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     return map;
   }
 
@@ -720,6 +796,9 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
       endsAtMinute: Value(endsAtMinute),
       location: Value(location),
       createdAt: Value(createdAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
     );
   }
 
@@ -736,6 +815,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
       endsAtMinute: serializer.fromJson<int>(json['endsAtMinute']),
       location: serializer.fromJson<String>(json['location']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -749,6 +829,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
       'endsAtMinute': serializer.toJson<int>(endsAtMinute),
       'location': serializer.toJson<String>(location),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -760,6 +841,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     int? endsAtMinute,
     String? location,
     DateTime? createdAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
   }) => ScheduleRow(
     id: id ?? this.id,
     subjectId: subjectId ?? this.subjectId,
@@ -768,6 +850,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     endsAtMinute: endsAtMinute ?? this.endsAtMinute,
     location: location ?? this.location,
     createdAt: createdAt ?? this.createdAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   ScheduleRow copyWithCompanion(ScheduleEntriesCompanion data) {
     return ScheduleRow(
@@ -784,6 +867,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
           : this.endsAtMinute,
       location: data.location.present ? data.location.value : this.location,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -796,7 +880,8 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
           ..write('startsAtMinute: $startsAtMinute, ')
           ..write('endsAtMinute: $endsAtMinute, ')
           ..write('location: $location, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -810,6 +895,7 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
     endsAtMinute,
     location,
     createdAt,
+    deletedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -821,7 +907,8 @@ class ScheduleRow extends DataClass implements Insertable<ScheduleRow> {
           other.startsAtMinute == this.startsAtMinute &&
           other.endsAtMinute == this.endsAtMinute &&
           other.location == this.location &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.deletedAt == this.deletedAt);
 }
 
 class ScheduleEntriesCompanion extends UpdateCompanion<ScheduleRow> {
@@ -832,6 +919,7 @@ class ScheduleEntriesCompanion extends UpdateCompanion<ScheduleRow> {
   final Value<int> endsAtMinute;
   final Value<String> location;
   final Value<DateTime> createdAt;
+  final Value<DateTime?> deletedAt;
   const ScheduleEntriesCompanion({
     this.id = const Value.absent(),
     this.subjectId = const Value.absent(),
@@ -840,6 +928,7 @@ class ScheduleEntriesCompanion extends UpdateCompanion<ScheduleRow> {
     this.endsAtMinute = const Value.absent(),
     this.location = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
   });
   ScheduleEntriesCompanion.insert({
     this.id = const Value.absent(),
@@ -849,6 +938,7 @@ class ScheduleEntriesCompanion extends UpdateCompanion<ScheduleRow> {
     required int endsAtMinute,
     required String location,
     this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
   }) : subjectId = Value(subjectId),
        weekdayIndex = Value(weekdayIndex),
        startsAtMinute = Value(startsAtMinute),
@@ -862,6 +952,7 @@ class ScheduleEntriesCompanion extends UpdateCompanion<ScheduleRow> {
     Expression<int>? endsAtMinute,
     Expression<String>? location,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? deletedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -871,6 +962,7 @@ class ScheduleEntriesCompanion extends UpdateCompanion<ScheduleRow> {
       if (endsAtMinute != null) 'ends_at_minute': endsAtMinute,
       if (location != null) 'location': location,
       if (createdAt != null) 'created_at': createdAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
     });
   }
 
@@ -882,6 +974,7 @@ class ScheduleEntriesCompanion extends UpdateCompanion<ScheduleRow> {
     Value<int>? endsAtMinute,
     Value<String>? location,
     Value<DateTime>? createdAt,
+    Value<DateTime?>? deletedAt,
   }) {
     return ScheduleEntriesCompanion(
       id: id ?? this.id,
@@ -891,6 +984,7 @@ class ScheduleEntriesCompanion extends UpdateCompanion<ScheduleRow> {
       endsAtMinute: endsAtMinute ?? this.endsAtMinute,
       location: location ?? this.location,
       createdAt: createdAt ?? this.createdAt,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -918,6 +1012,9 @@ class ScheduleEntriesCompanion extends UpdateCompanion<ScheduleRow> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     return map;
   }
 
@@ -930,7 +1027,8 @@ class ScheduleEntriesCompanion extends UpdateCompanion<ScheduleRow> {
           ..write('startsAtMinute: $startsAtMinute, ')
           ..write('endsAtMinute: $endsAtMinute, ')
           ..write('location: $location, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -1535,6 +1633,7 @@ typedef $$SubjectsTableCreateCompanionBuilder =
       required int credits,
       required int accentColorValue,
       Value<DateTime> createdAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 typedef $$SubjectsTableUpdateCompanionBuilder =
@@ -1546,6 +1645,7 @@ typedef $$SubjectsTableUpdateCompanionBuilder =
       Value<int> credits,
       Value<int> accentColorValue,
       Value<DateTime> createdAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 
@@ -1636,6 +1736,11 @@ class $$SubjectsTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1733,6 +1838,11 @@ class $$SubjectsTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SubjectsTableAnnotationComposer
@@ -1766,6 +1876,9 @@ class $$SubjectsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   Expression<T> scheduleEntriesRefs<T extends Object>(
     Expression<T> Function($$ScheduleEntriesTableAnnotationComposer a) f,
@@ -1856,6 +1969,7 @@ class $$SubjectsTableTableManager
                 Value<int> credits = const Value.absent(),
                 Value<int> accentColorValue = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SubjectsCompanion(
                 id: id,
@@ -1865,6 +1979,7 @@ class $$SubjectsTableTableManager
                 credits: credits,
                 accentColorValue: accentColorValue,
                 createdAt: createdAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1876,6 +1991,7 @@ class $$SubjectsTableTableManager
                 required int credits,
                 required int accentColorValue,
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SubjectsCompanion.insert(
                 id: id,
@@ -1885,6 +2001,7 @@ class $$SubjectsTableTableManager
                 credits: credits,
                 accentColorValue: accentColorValue,
                 createdAt: createdAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -1979,6 +2096,7 @@ typedef $$ScheduleEntriesTableCreateCompanionBuilder =
       required int endsAtMinute,
       required String location,
       Value<DateTime> createdAt,
+      Value<DateTime?> deletedAt,
     });
 typedef $$ScheduleEntriesTableUpdateCompanionBuilder =
     ScheduleEntriesCompanion Function({
@@ -1989,6 +2107,7 @@ typedef $$ScheduleEntriesTableUpdateCompanionBuilder =
       Value<int> endsAtMinute,
       Value<String> location,
       Value<DateTime> createdAt,
+      Value<DateTime?> deletedAt,
     });
 
 final class $$ScheduleEntriesTableReferences
@@ -2058,6 +2177,11 @@ class $$ScheduleEntriesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$SubjectsTableFilterComposer get subjectId {
     final $$SubjectsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -2121,6 +2245,11 @@ class $$ScheduleEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$SubjectsTableOrderingComposer get subjectId {
     final $$SubjectsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2177,6 +2306,9 @@ class $$ScheduleEntriesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   $$SubjectsTableAnnotationComposer get subjectId {
     final $$SubjectsTableAnnotationComposer composer = $composerBuilder(
@@ -2239,6 +2371,7 @@ class $$ScheduleEntriesTableTableManager
                 Value<int> endsAtMinute = const Value.absent(),
                 Value<String> location = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
               }) => ScheduleEntriesCompanion(
                 id: id,
                 subjectId: subjectId,
@@ -2247,6 +2380,7 @@ class $$ScheduleEntriesTableTableManager
                 endsAtMinute: endsAtMinute,
                 location: location,
                 createdAt: createdAt,
+                deletedAt: deletedAt,
               ),
           createCompanionCallback:
               ({
@@ -2257,6 +2391,7 @@ class $$ScheduleEntriesTableTableManager
                 required int endsAtMinute,
                 required String location,
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
               }) => ScheduleEntriesCompanion.insert(
                 id: id,
                 subjectId: subjectId,
@@ -2265,6 +2400,7 @@ class $$ScheduleEntriesTableTableManager
                 endsAtMinute: endsAtMinute,
                 location: location,
                 createdAt: createdAt,
+                deletedAt: deletedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(

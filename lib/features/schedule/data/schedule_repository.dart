@@ -14,13 +14,33 @@ class ScheduleRepository {
     );
   }
 
+  Stream<List<ClassSession>> watchDeletedSessions() {
+    return _database.scheduleDao.watchDeleted().map(
+      (rows) => rows.map(_toDomain).toList(),
+    );
+  }
+
   Future<List<ClassSession>> getSessions() async {
     final rows = await _database.scheduleDao.getAll();
     return rows.map(_toDomain).toList();
   }
 
   Future<int> saveSession(ClassSession session) {
+    if (session.id != null) {
+      return _database.scheduleDao
+          .updateScheduleEntry(_toCompanion(session))
+          .then((_) => session.id!);
+    }
+
     return _database.scheduleDao.insertScheduleEntry(_toCompanion(session));
+  }
+
+  Future<bool> moveToTrash(int id) {
+    return _database.scheduleDao.moveToTrash(id);
+  }
+
+  Future<bool> restoreSession(int id) {
+    return _database.scheduleDao.restoreScheduleEntry(id);
   }
 
   Future<void> seedIfEmpty() async {
@@ -87,16 +107,19 @@ class ScheduleRepository {
       startsAtMinute: row.startsAtMinute,
       endsAtMinute: row.endsAtMinute,
       location: row.location,
+      deletedAt: row.deletedAt,
     );
   }
 
   ScheduleEntriesCompanion _toCompanion(ClassSession session) {
     return ScheduleEntriesCompanion(
+      id: session.id == null ? const Value.absent() : Value(session.id!),
       subjectId: Value(session.subjectId),
       weekdayIndex: Value(session.weekday.index),
       startsAtMinute: Value(session.startsAtMinute),
       endsAtMinute: Value(session.endsAtMinute),
       location: Value(session.location),
+      deletedAt: Value(session.deletedAt),
     );
   }
 }

@@ -14,6 +14,12 @@ class SubjectRepository {
     );
   }
 
+  Stream<List<domain.Subject>> watchDeletedSubjects() {
+    return _database.subjectsDao.watchDeleted().map(
+      (rows) => rows.map(_toDomain).toList(),
+    );
+  }
+
   Future<List<domain.Subject>> getSubjects() async {
     final rows = await _database.subjectsDao.getAll();
     return rows.map(_toDomain).toList();
@@ -21,6 +27,14 @@ class SubjectRepository {
 
   Future<void> saveSubject(domain.Subject subject) {
     return _database.subjectsDao.upsertSubject(_toCompanion(subject));
+  }
+
+  Future<bool> moveToTrash(String id) {
+    return _database.subjectsDao.moveToTrash(id);
+  }
+
+  Future<bool> restoreSubject(String id) {
+    return _database.subjectsDao.restoreSubject(id);
   }
 
   Future<void> seedIfEmpty() async {
@@ -77,6 +91,7 @@ class SubjectRepository {
       room: row.room,
       credits: row.credits,
       accentColorValue: row.accentColorValue,
+      deletedAt: row.deletedAt,
     );
   }
 
@@ -88,6 +103,7 @@ class SubjectRepository {
       room: Value(subject.room),
       credits: Value(subject.credits),
       accentColorValue: Value(subject.accentColorValue),
+      deletedAt: Value(subject.deletedAt),
     );
   }
 }

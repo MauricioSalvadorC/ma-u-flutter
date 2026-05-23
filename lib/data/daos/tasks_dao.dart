@@ -27,6 +27,13 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
     return into(academicTasks).insert(task);
   }
 
+  Future<bool> updateTask(AcademicTasksCompanion task) {
+    final id = task.id.value;
+    return (update(academicTasks)..where((table) => table.id.equals(id)))
+        .write(task)
+        .then((rows) => rows > 0);
+  }
+
   Future<bool> updateCompleted({required int id, required bool isCompleted}) {
     return (update(academicTasks)..where((table) => table.id.equals(id)))
         .write(AcademicTasksCompanion(isCompleted: Value(isCompleted)))

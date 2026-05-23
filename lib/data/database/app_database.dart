@@ -15,6 +15,7 @@ class Subjects extends Table {
   IntColumn get credits => integer()();
   IntColumn get accentColorValue => integer()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -29,6 +30,7 @@ class ScheduleEntries extends Table {
   IntColumn get endsAtMinute => integer()();
   TextColumn get location => text()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
 }
 
 @DataClassName('TaskRow')
@@ -53,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'ma_u.sqlite'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -64,6 +66,10 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 3) {
           await migrator.addColumn(academicTasks, academicTasks.deletedAt);
+        }
+        if (from < 4) {
+          await migrator.addColumn(subjects, subjects.deletedAt);
+          await migrator.addColumn(scheduleEntries, scheduleEntries.deletedAt);
         }
       },
     );

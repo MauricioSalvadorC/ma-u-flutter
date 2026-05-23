@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/destructive_confirmation_dialog.dart';
 import '../../../data/database/app_database_provider.dart';
 import '../../schedule/data/academic_seed_service.dart';
 import '../../subjects/data/subject_repository.dart';
@@ -42,6 +43,31 @@ class _AcademicPlannerScreenState extends State<AcademicPlannerScreen> {
     }
   }
 
+  Future<void> _openSubjectEditor(Subject currentSubject) async {
+    final subject = await showDialog<Subject>(
+      context: context,
+      builder: (_) => _SubjectFormDialog(initialSubject: currentSubject),
+    );
+
+    if (subject != null) {
+      await _subjectRepository.saveSubject(subject);
+    }
+  }
+
+  Future<void> _moveSubjectToTrash(Subject subject) async {
+    final confirmed = await DestructiveConfirmationDialog.show(
+      context: context,
+      title: 'Mover materia a papelera',
+      message:
+          'La materia "${subject.name}" se ocultara de tus listas. Podras restaurarla desde Papelera.',
+      confirmLabel: 'Mover',
+    );
+
+    if (confirmed) {
+      await _subjectRepository.moveToTrash(subject.id);
+    }
+  }
+
   Future<void> _openSessionForm(List<Subject> subjects) async {
     final session = await showDialog<ClassSession>(
       context: context,
@@ -50,6 +76,42 @@ class _AcademicPlannerScreenState extends State<AcademicPlannerScreen> {
 
     if (session != null) {
       await _scheduleRepository.saveSession(session);
+    }
+  }
+
+  Future<void> _openSessionEditor({
+    required ClassSession currentSession,
+    required List<Subject> subjects,
+  }) async {
+    final session = await showDialog<ClassSession>(
+      context: context,
+      builder: (_) => _SessionFormDialog(
+        subjects: subjects,
+        initialSession: currentSession,
+      ),
+    );
+
+    if (session != null) {
+      await _scheduleRepository.saveSession(session);
+    }
+  }
+
+  Future<void> _moveSessionToTrash(ClassSession session) async {
+    final id = session.id;
+    if (id == null) {
+      return;
+    }
+
+    final confirmed = await DestructiveConfirmationDialog.show(
+      context: context,
+      title: 'Mover clase a papelera',
+      message:
+          'Esta clase se ocultara del horario. Podras restaurarla despues.',
+      confirmLabel: 'Mover',
+    );
+
+    if (confirmed) {
+      await _scheduleRepository.moveToTrash(id);
     }
   }
 
@@ -90,6 +152,13 @@ class _AcademicPlannerScreenState extends State<AcademicPlannerScreen> {
                   sessions: sessions,
                   onAddSubject: _openSubjectForm,
                   onAddSession: () => _openSessionForm(subjects),
+                  onEditSubject: _openSubjectEditor,
+                  onDeleteSubject: _moveSubjectToTrash,
+                  onEditSession: (session) => _openSessionEditor(
+                    currentSession: session,
+                    subjects: subjects,
+                  ),
+                  onDeleteSession: _moveSessionToTrash,
                 );
               },
             );
@@ -106,12 +175,20 @@ class _AcademicPlannerView extends StatelessWidget {
     required this.sessions,
     required this.onAddSubject,
     required this.onAddSession,
+    required this.onEditSubject,
+    required this.onDeleteSubject,
+    required this.onEditSession,
+    required this.onDeleteSession,
   });
 
   final List<Subject> subjects;
   final List<ClassSession> sessions;
   final VoidCallback onAddSubject;
   final VoidCallback onAddSession;
+  final ValueChanged<Subject> onEditSubject;
+  final ValueChanged<Subject> onDeleteSubject;
+  final ValueChanged<ClassSession> onEditSession;
+  final ValueChanged<ClassSession> onDeleteSession;
 
   @override
   Widget build(BuildContext context) {
@@ -154,8 +231,17 @@ class _AcademicPlannerView extends StatelessWidget {
                 body: SafeArea(
                   child: TabBarView(
                     children: [
-                      _ScheduleTab(subjects: subjects, sessions: sessions),
-                      _SubjectsTab(subjects: subjects),
+                      _ScheduleTab(
+                        subjects: subjects,
+                        sessions: sessions,
+                        onEditSession: onEditSession,
+                        onDeleteSession: onDeleteSession,
+                      ),
+                      _SubjectsTab(
+                        subjects: subjects,
+                        onEditSubject: onEditSubject,
+                        onDeleteSubject: onDeleteSubject,
+                      ),
                     ],
                   ),
                 ),
@@ -169,17 +255,32 @@ class _AcademicPlannerView extends StatelessWidget {
 }
 
 class _ScheduleTab extends StatelessWidget {
-  const _ScheduleTab({required this.subjects, required this.sessions});
+  const _ScheduleTab({
+    required this.subjects,
+    required this.sessions,
+    required this.onEditSession,
+    required this.onDeleteSession,
+  });
 
   final List<Subject> subjects;
   final List<ClassSession> sessions;
+  final ValueChanged<ClassSession> onEditSession;
+  final ValueChanged<ClassSession> onDeleteSession;
 
   @override
   Widget build(BuildContext context) {
+    final activeSubjectIds = subjects.map((subject) => subject.id).toSet();
     final sessionsByDay = {
       for (final day in Weekday.values)
-        day: sessions.where((session) => session.weekday == day).toList()
-          ..sort((a, b) => a.startsAtMinute.compareTo(b.startsAtMinute)),
+        day:
+            sessions
+                .where(
+                  (session) =>
+                      session.weekday == day &&
+                      activeSubjectIds.contains(session.subjectId),
+                )
+                .toList()
+              ..sort((a, b) => a.startsAtMinute.compareTo(b.startsAtMinute)),
     };
 
     return ListView(
@@ -192,6 +293,8 @@ class _ScheduleTab extends StatelessWidget {
             day: day,
             sessions: sessionsByDay[day] ?? const [],
             subjects: subjects,
+            onEditSession: onEditSession,
+            onDeleteSession: onDeleteSession,
           ),
           const SizedBox(height: 12),
         ],
@@ -250,11 +353,15 @@ class _DaySection extends StatelessWidget {
     required this.day,
     required this.sessions,
     required this.subjects,
+    required this.onEditSession,
+    required this.onDeleteSession,
   });
 
   final Weekday day;
   final List<ClassSession> sessions;
   final List<Subject> subjects;
+  final ValueChanged<ClassSession> onEditSession;
+  final ValueChanged<ClassSession> onDeleteSession;
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +396,8 @@ class _DaySection extends StatelessWidget {
               subject: subjects.firstWhere(
                 (subject) => subject.id == session.subjectId,
               ),
+              onEdit: () => onEditSession(session),
+              onDelete: () => onDeleteSession(session),
             ),
             const SizedBox(height: 8),
           ],
@@ -298,10 +407,17 @@ class _DaySection extends StatelessWidget {
 }
 
 class _SessionCard extends StatelessWidget {
-  const _SessionCard({required this.session, required this.subject});
+  const _SessionCard({
+    required this.session,
+    required this.subject,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final ClassSession session;
   final Subject subject;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -309,51 +425,168 @@ class _SessionCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 5,
-              height: 58,
-              decoration: BoxDecoration(
-                color: subjectColor,
-                borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => _showSessionDetails(context),
+        onLongPress: () => _showSessionActions(context),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 5,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: subjectColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    subject.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      subject.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${session.timeRange} - ${session.location}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              _MiniBadge(label: subject.credits.toString()),
+              PopupMenuButton<_ItemAction>(
+                tooltip: 'Opciones de clase',
+                onSelected: (action) {
+                  switch (action) {
+                    case _ItemAction.view:
+                      _showSessionDetails(context);
+                    case _ItemAction.edit:
+                      onEdit();
+                    case _ItemAction.delete:
+                      onDelete();
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: _ItemAction.view,
+                    child: Text('Ver detalle'),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${session.timeRange} - ${session.location}',
-                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  PopupMenuItem(value: _ItemAction.edit, child: Text('Editar')),
+                  PopupMenuItem(
+                    value: _ItemAction.delete,
+                    child: Text('Mover a papelera'),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 10),
-            _MiniBadge(label: subject.credits.toString()),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  void _showSessionDetails(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  subject.name,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 14),
+                _AcademicDetailRow(label: 'Dia', value: session.weekday.label),
+                _AcademicDetailRow(label: 'Horario', value: session.timeRange),
+                _AcademicDetailRow(label: 'Salon', value: session.location),
+                _AcademicDetailRow(label: 'Docente', value: subject.teacher),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          onEdit();
+                        },
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Editar'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          onDelete();
+                        },
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Papelera'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSessionActions(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => _ActionSheet(
+        onView: () {
+          Navigator.of(context).pop();
+          _showSessionDetails(context);
+        },
+        onEdit: () {
+          Navigator.of(context).pop();
+          onEdit();
+        },
+        onDelete: () {
+          Navigator.of(context).pop();
+          onDelete();
+        },
       ),
     );
   }
 }
 
 class _SubjectsTab extends StatelessWidget {
-  const _SubjectsTab({required this.subjects});
+  const _SubjectsTab({
+    required this.subjects,
+    required this.onEditSubject,
+    required this.onDeleteSubject,
+  });
 
   final List<Subject> subjects;
+  final ValueChanged<Subject> onEditSubject;
+  final ValueChanged<Subject> onDeleteSubject;
 
   @override
   Widget build(BuildContext context) {
@@ -368,7 +601,11 @@ class _SubjectsTab extends StatelessWidget {
         _SubjectSummary(subjectCount: subjects.length, credits: totalCredits),
         const SizedBox(height: 16),
         for (final subject in subjects) ...[
-          _SubjectCard(subject: subject),
+          _SubjectCard(
+            subject: subject,
+            onEdit: () => onEditSubject(subject),
+            onDelete: () => onDeleteSubject(subject),
+          ),
           const SizedBox(height: 10),
         ],
       ],
@@ -442,9 +679,15 @@ class _SummaryTile extends StatelessWidget {
 }
 
 class _SubjectCard extends StatelessWidget {
-  const _SubjectCard({required this.subject});
+  const _SubjectCard({
+    required this.subject,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final Subject subject;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -452,43 +695,197 @@ class _SubjectCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: subjectColor.withAlpha(42),
-                borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => _showSubjectDetails(context),
+        onLongPress: () => _showSubjectActions(context),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: subjectColor.withAlpha(42),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.book_outlined, color: subjectColor),
               ),
-              child: Icon(Icons.book_outlined, color: subjectColor),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    subject.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      subject.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${subject.teacher} - ${subject.room}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              _MiniBadge(label: '${subject.credits} cr'),
+              PopupMenuButton<_ItemAction>(
+                tooltip: 'Opciones de materia',
+                onSelected: (action) {
+                  switch (action) {
+                    case _ItemAction.view:
+                      _showSubjectDetails(context);
+                    case _ItemAction.edit:
+                      onEdit();
+                    case _ItemAction.delete:
+                      onDelete();
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: _ItemAction.view,
+                    child: Text('Ver detalle'),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${subject.teacher} - ${subject.room}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  PopupMenuItem(value: _ItemAction.edit, child: Text('Editar')),
+                  PopupMenuItem(
+                    value: _ItemAction.delete,
+                    child: Text('Mover a papelera'),
                   ),
                 ],
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSubjectDetails(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  subject.name,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 14),
+                _AcademicDetailRow(label: 'Docente', value: subject.teacher),
+                _AcademicDetailRow(label: 'Salon', value: subject.room),
+                _AcademicDetailRow(
+                  label: 'Creditos',
+                  value: subject.credits.toString(),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          onEdit();
+                        },
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Editar'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          onDelete();
+                        },
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Papelera'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            _MiniBadge(label: '${subject.credits} cr'),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSubjectActions(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => _ActionSheet(
+        onView: () {
+          Navigator.of(context).pop();
+          _showSubjectDetails(context);
+        },
+        onEdit: () {
+          Navigator.of(context).pop();
+          onEdit();
+        },
+        onDelete: () {
+          Navigator.of(context).pop();
+          onDelete();
+        },
+      ),
+    );
+  }
+}
+
+enum _ItemAction { view, edit, delete }
+
+class _ActionSheet extends StatelessWidget {
+  const _ActionSheet({
+    required this.onView,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final VoidCallback onView;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.visibility_outlined),
+              title: const Text('Ver detalle'),
+              onTap: onView,
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Editar'),
+              onTap: onEdit,
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: const Text('Mover a papelera'),
+              onTap: onDelete,
+            ),
           ],
         ),
       ),
@@ -496,8 +893,41 @@ class _SubjectCard extends StatelessWidget {
   }
 }
 
+class _AcademicDetailRow extends StatelessWidget {
+  const _AcademicDetailRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+}
+
 class _SubjectFormDialog extends StatefulWidget {
-  const _SubjectFormDialog();
+  const _SubjectFormDialog({this.initialSubject});
+
+  final Subject? initialSubject;
 
   @override
   State<_SubjectFormDialog> createState() => _SubjectFormDialogState();
@@ -521,6 +951,19 @@ class _SubjectFormDialogState extends State<_SubjectFormDialog> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    final subject = widget.initialSubject;
+    if (subject != null) {
+      _nameController.text = subject.name;
+      _teacherController.text = subject.teacher;
+      _roomController.text = subject.room;
+      _creditsController.text = subject.credits.toString();
+      _accentColorValue = subject.accentColorValue;
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _teacherController.dispose();
@@ -536,12 +979,15 @@ class _SubjectFormDialogState extends State<_SubjectFormDialog> {
 
     Navigator.of(context).pop(
       Subject(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        id:
+            widget.initialSubject?.id ??
+            DateTime.now().microsecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
         teacher: _teacherController.text.trim(),
         room: _roomController.text.trim(),
         credits: int.parse(_creditsController.text.trim()),
         accentColorValue: _accentColorValue,
+        deletedAt: widget.initialSubject?.deletedAt,
       ),
     );
   }
@@ -549,7 +995,9 @@ class _SubjectFormDialogState extends State<_SubjectFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Nueva materia'),
+      title: Text(
+        widget.initialSubject == null ? 'Nueva materia' : 'Editar materia',
+      ),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -609,9 +1057,10 @@ class _SubjectFormDialogState extends State<_SubjectFormDialog> {
 }
 
 class _SessionFormDialog extends StatefulWidget {
-  const _SessionFormDialog({required this.subjects});
+  const _SessionFormDialog({required this.subjects, this.initialSession});
 
   final List<Subject> subjects;
+  final ClassSession? initialSession;
 
   @override
   State<_SessionFormDialog> createState() => _SessionFormDialogState();
@@ -628,7 +1077,16 @@ class _SessionFormDialogState extends State<_SessionFormDialog> {
   @override
   void initState() {
     super.initState();
-    _subjectId = widget.subjects.isEmpty ? '' : widget.subjects.first.id;
+    final session = widget.initialSession;
+    _subjectId =
+        session?.subjectId ??
+        (widget.subjects.isEmpty ? '' : widget.subjects.first.id);
+    if (session != null) {
+      _weekday = session.weekday;
+      _startController.text = _formatMinute(session.startsAtMinute);
+      _endController.text = _formatMinute(session.endsAtMinute);
+      _locationController.text = session.location;
+    }
   }
 
   @override
@@ -675,11 +1133,13 @@ class _SessionFormDialogState extends State<_SessionFormDialog> {
 
     Navigator.of(context).pop(
       ClassSession(
+        id: widget.initialSession?.id,
         subjectId: _subjectId,
         weekday: _weekday,
         startsAtMinute: startsAt,
         endsAtMinute: endsAt,
         location: _locationController.text.trim(),
+        deletedAt: widget.initialSession?.deletedAt,
       ),
     );
   }
@@ -700,7 +1160,9 @@ class _SessionFormDialogState extends State<_SessionFormDialog> {
     }
 
     return AlertDialog(
-      title: const Text('Nueva clase'),
+      title: Text(
+        widget.initialSession == null ? 'Nueva clase' : 'Editar clase',
+      ),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -784,6 +1246,12 @@ class _SessionFormDialogState extends State<_SessionFormDialog> {
       return 'HH:mm';
     }
     return null;
+  }
+
+  String _formatMinute(int minuteOfDay) {
+    final hour = minuteOfDay ~/ 60;
+    final minute = minuteOfDay % 60;
+    return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
   }
 }
 
