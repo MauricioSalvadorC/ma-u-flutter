@@ -13,6 +13,7 @@ class AppDetailBottomSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
       builder: (context) => AppDetailBottomSheet(children: children),
     );
   }
@@ -22,19 +23,22 @@ class AppDetailBottomSheet extends StatelessWidget {
     final mediaQuery = MediaQuery.of(context);
 
     return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: mediaQuery.size.height * 0.86),
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            0,
-            20,
-            20 + mediaQuery.viewInsets.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: children,
+      child: SizedBox(
+        width: double.infinity,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: mediaQuery.size.height * 0.86),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              0,
+              20,
+              20 + mediaQuery.viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children,
+            ),
           ),
         ),
       ),
