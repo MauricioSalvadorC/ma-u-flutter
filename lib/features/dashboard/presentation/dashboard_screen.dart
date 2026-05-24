@@ -835,57 +835,75 @@ class _ModuleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: module.onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: module.color.withAlpha(42),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(module.icon, color: module.color),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      module.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      module.subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: colorScheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                module.onTap == null ? Icons.lock_clock_outlined : Icons.east,
-                color: module.onTap == null
-                    ? colorScheme.outline
-                    : colorScheme.primary,
-              ),
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              colorScheme.primary.withAlpha(isDark ? 34 : 22),
+              module.color.withAlpha(isDark ? 24 : 14),
+              Colors.transparent,
             ],
+            stops: const [0, 0.58, 1],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: module.onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: module.color.withAlpha(isDark ? 56 : 46),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: module.color.withAlpha(isDark ? 96 : 72),
+                    ),
+                  ),
+                  child: Icon(module.icon, color: module.color),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        module.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        module.subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  module.onTap == null ? Icons.lock_clock_outlined : Icons.east,
+                  color: module.onTap == null
+                      ? colorScheme.outline
+                      : colorScheme.primary,
+                ),
+              ],
+            ),
           ),
         ),
       ),
