@@ -46,6 +46,10 @@ class AcademicTasks extends Table {
   TextColumn get description => text().nullable()();
   DateTimeColumn get dueDate => dateTime().nullable()();
   IntColumn get priorityIndex => integer()();
+  BoolColumn get reminderEnabled =>
+      boolean().withDefault(const Constant(false))();
+  IntColumn get reminderMinutesBefore =>
+      integer().withDefault(const Constant(30))();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -60,6 +64,10 @@ class StudySessions extends Table {
   DateTimeColumn get startsAt => dateTime().nullable()();
   IntColumn get durationMinutes => integer()();
   IntColumn get focusLevelIndex => integer()();
+  BoolColumn get reminderEnabled =>
+      boolean().withDefault(const Constant(false))();
+  IntColumn get reminderMinutesBefore =>
+      integer().withDefault(const Constant(30))();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -150,7 +158,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'ma_u.sqlite'));
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -179,6 +187,24 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 8) {
           await migrator.createTable(expenses);
+        }
+        if (from < 9) {
+          await migrator.addColumn(
+            academicTasks,
+            academicTasks.reminderEnabled,
+          );
+          await migrator.addColumn(
+            academicTasks,
+            academicTasks.reminderMinutesBefore,
+          );
+          await migrator.addColumn(
+            studySessions,
+            studySessions.reminderEnabled,
+          );
+          await migrator.addColumn(
+            studySessions,
+            studySessions.reminderMinutesBefore,
+          );
         }
       },
     );

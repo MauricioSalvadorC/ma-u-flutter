@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/formatters/money_formatter.dart';
+import '../../../core/notifications/notification_service.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/app_settings_repository.dart';
 import '../../../data/database/app_database_provider.dart';
@@ -17,6 +18,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   GradeScale _gradeScale = GradeScale.zeroToFive;
   ExpenseBudgetPeriod _budgetPeriod = ExpenseBudgetPeriod.weekly;
   int _budgetCents = 15000000;
+  bool? _notificationsEnabled;
+  int _taskReminderMinutes = MaUNotifications.defaultTaskReminderMinutes;
+  int _studyReminderMinutes = MaUNotifications.defaultStudyReminderMinutes;
   final _universityController = TextEditingController();
   final _careerController = TextEditingController();
   final _semesterController = TextEditingController();
@@ -26,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _repository = AppSettingsRepository(AppDatabaseProvider.instance);
     _loadAdvancedSettings();
+    _loadNotificationStatus();
   }
 
   @override
@@ -43,6 +48,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final university = await _repository.getUniversityName();
     final career = await _repository.getCareerName();
     final semester = await _repository.getCurrentSemester();
+    final taskReminderMinutes = await _repository.getTaskReminderMinutes();
+    final studyReminderMinutes = await _repository.getStudyReminderMinutes();
 
     if (!mounted) {
       return;
@@ -55,6 +62,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _universityController.text = university;
       _careerController.text = career;
       _semesterController.text = semester;
+      _taskReminderMinutes = taskReminderMinutes ?? _taskReminderMinutes;
+      _studyReminderMinutes = studyReminderMinutes ?? _studyReminderMinutes;
     });
   }
 
@@ -113,6 +122,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _loadNotificationStatus() async {
+    if (mounted) {
+      setState(() {
+        _notificationsEnabled = null;
+      });
+    }
+    final enabled = await MaUNotifications.instance.areNotificationsEnabled();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _notificationsEnabled = enabled;
+    });
+  }
+
+  Future<void> _refreshNotificationStatus() async {
+    await _loadNotificationStatus();
+    if (!mounted) {
+      return;
+    }
+
+    final enabled = _notificationsEnabled ?? false;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          enabled
+              ? 'Notificaciones activadas.'
+              : 'Permiso de notificaciones pendiente.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _requestNotifications() async {
+    final granted = await MaUNotifications.instance.requestPermission();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _notificationsEnabled = granted;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          granted
+              ? 'Notificaciones activadas.'
+              : 'Permiso pendiente en el sistema.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setTaskReminderMinutes(int minutes) async {
+    setState(() {
+      _taskReminderMinutes = minutes;
+    });
+    await _repository.setTaskReminderMinutes(minutes);
+  }
+
+  Future<void> _setStudyReminderMinutes(int minutes) async {
+    setState(() {
+      _studyReminderMinutes = minutes;
+    });
+    await _repository.setStudyReminderMinutes(minutes);
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
@@ -145,6 +220,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               budgetCents: _budgetCents,
               period: _budgetPeriod,
               onTap: _openBudgetDialog,
+            ),
+            const SizedBox(height: 12),
+            _NotificationsPanel(
+              enabled: _notificationsEnabled,
+              taskReminderMinutes: _taskReminderMinutes,
+              studyReminderMinutes: _studyReminderMinutes,
+              onRequest: _requestNotifications,
+              onRefresh: _refreshNotificationStatus,
+              onTaskReminderChanged: _setTaskReminderMinutes,
+              onStudyReminderChanged: _setStudyReminderMinutes,
             ),
             const SizedBox(height: 12),
             _GradeScalePanel(selected: _gradeScale, onSelected: _setGradeScale),
@@ -288,6 +373,144 @@ class _ColorPanel extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+class _NotificationsPanel extends StatelessWidget {
+  const _NotificationsPanel({
+    required this.enabled,
+    required this.taskReminderMinutes,
+    required this.studyReminderMinutes,
+    required this.onRequest,
+    required this.onRefresh,
+    required this.onTaskReminderChanged,
+    required this.onStudyReminderChanged,
+  });
+
+  final bool? enabled;
+  final int taskReminderMinutes;
+  final int studyReminderMinutes;
+  final VoidCallback onRequest;
+  final VoidCallback onRefresh;
+  final ValueChanged<int> onTaskReminderChanged;
+  final ValueChanged<int> onStudyReminderChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = enabled ?? false;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return _SettingsCard(
+      title: 'Notificaciones',
+      subtitle: 'Recordatorios locales para tareas y sesiones de estudio.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: (isEnabled ? colorScheme.primary : colorScheme.outline)
+                      .withAlpha(36),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  isEnabled
+                      ? Icons.notifications_active_outlined
+                      : Icons.notifications_off_outlined,
+                  color: isEnabled ? colorScheme.primary : colorScheme.outline,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  enabled == null
+                      ? 'Revisando permiso...'
+                      : isEnabled
+                      ? 'Activadas'
+                      : 'Permiso pendiente',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh_outlined),
+                label: const Text('Actualizar'),
+              ),
+              FilledButton.icon(
+                onPressed: isEnabled ? null : onRequest,
+                icon: const Icon(Icons.notifications_active_outlined),
+                label: const Text('Activar'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Estos tiempos se aplican al crear nuevos recordatorios.',
+            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          _ReminderDefaultSelector(
+            icon: Icons.task_alt_outlined,
+            label: 'Tareas',
+            value: taskReminderMinutes,
+            onChanged: onTaskReminderChanged,
+          ),
+          const SizedBox(height: 10),
+          _ReminderDefaultSelector(
+            icon: Icons.psychology_alt_outlined,
+            label: 'Estudio',
+            value: studyReminderMinutes,
+            onChanged: onStudyReminderChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReminderDefaultSelector extends StatelessWidget {
+  const _ReminderDefaultSelector({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<int>(
+      initialValue: value,
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+      items: [
+        for (final option in MaUNotifications.reminderOptions)
+          DropdownMenuItem(
+            value: option.minutesBefore,
+            child: Text(option.label),
+          ),
+      ],
+      onChanged: (minutes) {
+        if (minutes != null) {
+          onChanged(minutes);
+        }
+      },
     );
   }
 }

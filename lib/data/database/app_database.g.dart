@@ -1109,6 +1109,32 @@ class $AcademicTasksTable extends AcademicTasks
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _reminderEnabledMeta = const VerificationMeta(
+    'reminderEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> reminderEnabled = GeneratedColumn<bool>(
+    'reminder_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("reminder_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _reminderMinutesBeforeMeta =
+      const VerificationMeta('reminderMinutesBefore');
+  @override
+  late final GeneratedColumn<int> reminderMinutesBefore = GeneratedColumn<int>(
+    'reminder_minutes_before',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(30),
+  );
   static const VerificationMeta _isCompletedMeta = const VerificationMeta(
     'isCompleted',
   );
@@ -1155,6 +1181,8 @@ class $AcademicTasksTable extends AcademicTasks
     description,
     dueDate,
     priorityIndex,
+    reminderEnabled,
+    reminderMinutesBefore,
     isCompleted,
     createdAt,
     deletedAt,
@@ -1216,6 +1244,24 @@ class $AcademicTasksTable extends AcademicTasks
     } else if (isInserting) {
       context.missing(_priorityIndexMeta);
     }
+    if (data.containsKey('reminder_enabled')) {
+      context.handle(
+        _reminderEnabledMeta,
+        reminderEnabled.isAcceptableOrUnknown(
+          data['reminder_enabled']!,
+          _reminderEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_minutes_before')) {
+      context.handle(
+        _reminderMinutesBeforeMeta,
+        reminderMinutesBefore.isAcceptableOrUnknown(
+          data['reminder_minutes_before']!,
+          _reminderMinutesBeforeMeta,
+        ),
+      );
+    }
     if (data.containsKey('is_completed')) {
       context.handle(
         _isCompletedMeta,
@@ -1270,6 +1316,14 @@ class $AcademicTasksTable extends AcademicTasks
         DriftSqlType.int,
         data['${effectivePrefix}priority_index'],
       )!,
+      reminderEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}reminder_enabled'],
+      )!,
+      reminderMinutesBefore: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_minutes_before'],
+      )!,
       isCompleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_completed'],
@@ -1298,6 +1352,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
   final String? description;
   final DateTime? dueDate;
   final int priorityIndex;
+  final bool reminderEnabled;
+  final int reminderMinutesBefore;
   final bool isCompleted;
   final DateTime createdAt;
   final DateTime? deletedAt;
@@ -1308,6 +1364,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     this.description,
     this.dueDate,
     required this.priorityIndex,
+    required this.reminderEnabled,
+    required this.reminderMinutesBefore,
     required this.isCompleted,
     required this.createdAt,
     this.deletedAt,
@@ -1325,6 +1383,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
       map['due_date'] = Variable<DateTime>(dueDate);
     }
     map['priority_index'] = Variable<int>(priorityIndex);
+    map['reminder_enabled'] = Variable<bool>(reminderEnabled);
+    map['reminder_minutes_before'] = Variable<int>(reminderMinutesBefore);
     map['is_completed'] = Variable<bool>(isCompleted);
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -1345,6 +1405,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
           ? const Value.absent()
           : Value(dueDate),
       priorityIndex: Value(priorityIndex),
+      reminderEnabled: Value(reminderEnabled),
+      reminderMinutesBefore: Value(reminderMinutesBefore),
       isCompleted: Value(isCompleted),
       createdAt: Value(createdAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -1365,6 +1427,10 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
       description: serializer.fromJson<String?>(json['description']),
       dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
       priorityIndex: serializer.fromJson<int>(json['priorityIndex']),
+      reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
+      reminderMinutesBefore: serializer.fromJson<int>(
+        json['reminderMinutesBefore'],
+      ),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -1380,6 +1446,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
       'description': serializer.toJson<String?>(description),
       'dueDate': serializer.toJson<DateTime?>(dueDate),
       'priorityIndex': serializer.toJson<int>(priorityIndex),
+      'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
+      'reminderMinutesBefore': serializer.toJson<int>(reminderMinutesBefore),
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -1393,6 +1461,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     Value<String?> description = const Value.absent(),
     Value<DateTime?> dueDate = const Value.absent(),
     int? priorityIndex,
+    bool? reminderEnabled,
+    int? reminderMinutesBefore,
     bool? isCompleted,
     DateTime? createdAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -1403,6 +1473,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     description: description.present ? description.value : this.description,
     dueDate: dueDate.present ? dueDate.value : this.dueDate,
     priorityIndex: priorityIndex ?? this.priorityIndex,
+    reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+    reminderMinutesBefore: reminderMinutesBefore ?? this.reminderMinutesBefore,
     isCompleted: isCompleted ?? this.isCompleted,
     createdAt: createdAt ?? this.createdAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -1419,6 +1491,12 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
       priorityIndex: data.priorityIndex.present
           ? data.priorityIndex.value
           : this.priorityIndex,
+      reminderEnabled: data.reminderEnabled.present
+          ? data.reminderEnabled.value
+          : this.reminderEnabled,
+      reminderMinutesBefore: data.reminderMinutesBefore.present
+          ? data.reminderMinutesBefore.value
+          : this.reminderMinutesBefore,
       isCompleted: data.isCompleted.present
           ? data.isCompleted.value
           : this.isCompleted,
@@ -1436,6 +1514,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
           ..write('description: $description, ')
           ..write('dueDate: $dueDate, ')
           ..write('priorityIndex: $priorityIndex, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderMinutesBefore: $reminderMinutesBefore, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('createdAt: $createdAt, ')
           ..write('deletedAt: $deletedAt')
@@ -1451,6 +1531,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
     description,
     dueDate,
     priorityIndex,
+    reminderEnabled,
+    reminderMinutesBefore,
     isCompleted,
     createdAt,
     deletedAt,
@@ -1465,6 +1547,8 @@ class TaskRow extends DataClass implements Insertable<TaskRow> {
           other.description == this.description &&
           other.dueDate == this.dueDate &&
           other.priorityIndex == this.priorityIndex &&
+          other.reminderEnabled == this.reminderEnabled &&
+          other.reminderMinutesBefore == this.reminderMinutesBefore &&
           other.isCompleted == this.isCompleted &&
           other.createdAt == this.createdAt &&
           other.deletedAt == this.deletedAt);
@@ -1477,6 +1561,8 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
   final Value<String?> description;
   final Value<DateTime?> dueDate;
   final Value<int> priorityIndex;
+  final Value<bool> reminderEnabled;
+  final Value<int> reminderMinutesBefore;
   final Value<bool> isCompleted;
   final Value<DateTime> createdAt;
   final Value<DateTime?> deletedAt;
@@ -1487,6 +1573,8 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
     this.description = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.priorityIndex = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    this.reminderMinutesBefore = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -1498,6 +1586,8 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
     this.description = const Value.absent(),
     this.dueDate = const Value.absent(),
     required int priorityIndex,
+    this.reminderEnabled = const Value.absent(),
+    this.reminderMinutesBefore = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -1511,6 +1601,8 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
     Expression<String>? description,
     Expression<DateTime>? dueDate,
     Expression<int>? priorityIndex,
+    Expression<bool>? reminderEnabled,
+    Expression<int>? reminderMinutesBefore,
     Expression<bool>? isCompleted,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? deletedAt,
@@ -1522,6 +1614,9 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
       if (description != null) 'description': description,
       if (dueDate != null) 'due_date': dueDate,
       if (priorityIndex != null) 'priority_index': priorityIndex,
+      if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
+      if (reminderMinutesBefore != null)
+        'reminder_minutes_before': reminderMinutesBefore,
       if (isCompleted != null) 'is_completed': isCompleted,
       if (createdAt != null) 'created_at': createdAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -1535,6 +1630,8 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
     Value<String?>? description,
     Value<DateTime?>? dueDate,
     Value<int>? priorityIndex,
+    Value<bool>? reminderEnabled,
+    Value<int>? reminderMinutesBefore,
     Value<bool>? isCompleted,
     Value<DateTime>? createdAt,
     Value<DateTime?>? deletedAt,
@@ -1546,6 +1643,9 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
       description: description ?? this.description,
       dueDate: dueDate ?? this.dueDate,
       priorityIndex: priorityIndex ?? this.priorityIndex,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      reminderMinutesBefore:
+          reminderMinutesBefore ?? this.reminderMinutesBefore,
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -1573,6 +1673,14 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
     if (priorityIndex.present) {
       map['priority_index'] = Variable<int>(priorityIndex.value);
     }
+    if (reminderEnabled.present) {
+      map['reminder_enabled'] = Variable<bool>(reminderEnabled.value);
+    }
+    if (reminderMinutesBefore.present) {
+      map['reminder_minutes_before'] = Variable<int>(
+        reminderMinutesBefore.value,
+      );
+    }
     if (isCompleted.present) {
       map['is_completed'] = Variable<bool>(isCompleted.value);
     }
@@ -1594,6 +1702,8 @@ class AcademicTasksCompanion extends UpdateCompanion<TaskRow> {
           ..write('description: $description, ')
           ..write('dueDate: $dueDate, ')
           ..write('priorityIndex: $priorityIndex, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderMinutesBefore: $reminderMinutesBefore, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('createdAt: $createdAt, ')
           ..write('deletedAt: $deletedAt')
@@ -1686,6 +1796,32 @@ class $StudySessionsTable extends StudySessions
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _reminderEnabledMeta = const VerificationMeta(
+    'reminderEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> reminderEnabled = GeneratedColumn<bool>(
+    'reminder_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("reminder_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _reminderMinutesBeforeMeta =
+      const VerificationMeta('reminderMinutesBefore');
+  @override
+  late final GeneratedColumn<int> reminderMinutesBefore = GeneratedColumn<int>(
+    'reminder_minutes_before',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(30),
+  );
   static const VerificationMeta _isCompletedMeta = const VerificationMeta(
     'isCompleted',
   );
@@ -1733,6 +1869,8 @@ class $StudySessionsTable extends StudySessions
     startsAt,
     durationMinutes,
     focusLevelIndex,
+    reminderEnabled,
+    reminderMinutesBefore,
     isCompleted,
     createdAt,
     deletedAt,
@@ -1802,6 +1940,24 @@ class $StudySessionsTable extends StudySessions
     } else if (isInserting) {
       context.missing(_focusLevelIndexMeta);
     }
+    if (data.containsKey('reminder_enabled')) {
+      context.handle(
+        _reminderEnabledMeta,
+        reminderEnabled.isAcceptableOrUnknown(
+          data['reminder_enabled']!,
+          _reminderEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_minutes_before')) {
+      context.handle(
+        _reminderMinutesBeforeMeta,
+        reminderMinutesBefore.isAcceptableOrUnknown(
+          data['reminder_minutes_before']!,
+          _reminderMinutesBeforeMeta,
+        ),
+      );
+    }
     if (data.containsKey('is_completed')) {
       context.handle(
         _isCompletedMeta,
@@ -1860,6 +2016,14 @@ class $StudySessionsTable extends StudySessions
         DriftSqlType.int,
         data['${effectivePrefix}focus_level_index'],
       )!,
+      reminderEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}reminder_enabled'],
+      )!,
+      reminderMinutesBefore: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_minutes_before'],
+      )!,
       isCompleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_completed'],
@@ -1889,6 +2053,8 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
   final DateTime? startsAt;
   final int durationMinutes;
   final int focusLevelIndex;
+  final bool reminderEnabled;
+  final int reminderMinutesBefore;
   final bool isCompleted;
   final DateTime createdAt;
   final DateTime? deletedAt;
@@ -1900,6 +2066,8 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
     this.startsAt,
     required this.durationMinutes,
     required this.focusLevelIndex,
+    required this.reminderEnabled,
+    required this.reminderMinutesBefore,
     required this.isCompleted,
     required this.createdAt,
     this.deletedAt,
@@ -1918,6 +2086,8 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
     }
     map['duration_minutes'] = Variable<int>(durationMinutes);
     map['focus_level_index'] = Variable<int>(focusLevelIndex);
+    map['reminder_enabled'] = Variable<bool>(reminderEnabled);
+    map['reminder_minutes_before'] = Variable<int>(reminderMinutesBefore);
     map['is_completed'] = Variable<bool>(isCompleted);
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -1939,6 +2109,8 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
           : Value(startsAt),
       durationMinutes: Value(durationMinutes),
       focusLevelIndex: Value(focusLevelIndex),
+      reminderEnabled: Value(reminderEnabled),
+      reminderMinutesBefore: Value(reminderMinutesBefore),
       isCompleted: Value(isCompleted),
       createdAt: Value(createdAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -1960,6 +2132,10 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
       startsAt: serializer.fromJson<DateTime?>(json['startsAt']),
       durationMinutes: serializer.fromJson<int>(json['durationMinutes']),
       focusLevelIndex: serializer.fromJson<int>(json['focusLevelIndex']),
+      reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
+      reminderMinutesBefore: serializer.fromJson<int>(
+        json['reminderMinutesBefore'],
+      ),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -1976,6 +2152,8 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
       'startsAt': serializer.toJson<DateTime?>(startsAt),
       'durationMinutes': serializer.toJson<int>(durationMinutes),
       'focusLevelIndex': serializer.toJson<int>(focusLevelIndex),
+      'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
+      'reminderMinutesBefore': serializer.toJson<int>(reminderMinutesBefore),
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -1990,6 +2168,8 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
     Value<DateTime?> startsAt = const Value.absent(),
     int? durationMinutes,
     int? focusLevelIndex,
+    bool? reminderEnabled,
+    int? reminderMinutesBefore,
     bool? isCompleted,
     DateTime? createdAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -2001,6 +2181,8 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
     startsAt: startsAt.present ? startsAt.value : this.startsAt,
     durationMinutes: durationMinutes ?? this.durationMinutes,
     focusLevelIndex: focusLevelIndex ?? this.focusLevelIndex,
+    reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+    reminderMinutesBefore: reminderMinutesBefore ?? this.reminderMinutesBefore,
     isCompleted: isCompleted ?? this.isCompleted,
     createdAt: createdAt ?? this.createdAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -2018,6 +2200,12 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
       focusLevelIndex: data.focusLevelIndex.present
           ? data.focusLevelIndex.value
           : this.focusLevelIndex,
+      reminderEnabled: data.reminderEnabled.present
+          ? data.reminderEnabled.value
+          : this.reminderEnabled,
+      reminderMinutesBefore: data.reminderMinutesBefore.present
+          ? data.reminderMinutesBefore.value
+          : this.reminderMinutesBefore,
       isCompleted: data.isCompleted.present
           ? data.isCompleted.value
           : this.isCompleted,
@@ -2036,6 +2224,8 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
           ..write('startsAt: $startsAt, ')
           ..write('durationMinutes: $durationMinutes, ')
           ..write('focusLevelIndex: $focusLevelIndex, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderMinutesBefore: $reminderMinutesBefore, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('createdAt: $createdAt, ')
           ..write('deletedAt: $deletedAt')
@@ -2052,6 +2242,8 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
     startsAt,
     durationMinutes,
     focusLevelIndex,
+    reminderEnabled,
+    reminderMinutesBefore,
     isCompleted,
     createdAt,
     deletedAt,
@@ -2067,6 +2259,8 @@ class StudySessionRow extends DataClass implements Insertable<StudySessionRow> {
           other.startsAt == this.startsAt &&
           other.durationMinutes == this.durationMinutes &&
           other.focusLevelIndex == this.focusLevelIndex &&
+          other.reminderEnabled == this.reminderEnabled &&
+          other.reminderMinutesBefore == this.reminderMinutesBefore &&
           other.isCompleted == this.isCompleted &&
           other.createdAt == this.createdAt &&
           other.deletedAt == this.deletedAt);
@@ -2080,6 +2274,8 @@ class StudySessionsCompanion extends UpdateCompanion<StudySessionRow> {
   final Value<DateTime?> startsAt;
   final Value<int> durationMinutes;
   final Value<int> focusLevelIndex;
+  final Value<bool> reminderEnabled;
+  final Value<int> reminderMinutesBefore;
   final Value<bool> isCompleted;
   final Value<DateTime> createdAt;
   final Value<DateTime?> deletedAt;
@@ -2091,6 +2287,8 @@ class StudySessionsCompanion extends UpdateCompanion<StudySessionRow> {
     this.startsAt = const Value.absent(),
     this.durationMinutes = const Value.absent(),
     this.focusLevelIndex = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    this.reminderMinutesBefore = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -2103,6 +2301,8 @@ class StudySessionsCompanion extends UpdateCompanion<StudySessionRow> {
     this.startsAt = const Value.absent(),
     required int durationMinutes,
     required int focusLevelIndex,
+    this.reminderEnabled = const Value.absent(),
+    this.reminderMinutesBefore = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -2118,6 +2318,8 @@ class StudySessionsCompanion extends UpdateCompanion<StudySessionRow> {
     Expression<DateTime>? startsAt,
     Expression<int>? durationMinutes,
     Expression<int>? focusLevelIndex,
+    Expression<bool>? reminderEnabled,
+    Expression<int>? reminderMinutesBefore,
     Expression<bool>? isCompleted,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? deletedAt,
@@ -2130,6 +2332,9 @@ class StudySessionsCompanion extends UpdateCompanion<StudySessionRow> {
       if (startsAt != null) 'starts_at': startsAt,
       if (durationMinutes != null) 'duration_minutes': durationMinutes,
       if (focusLevelIndex != null) 'focus_level_index': focusLevelIndex,
+      if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
+      if (reminderMinutesBefore != null)
+        'reminder_minutes_before': reminderMinutesBefore,
       if (isCompleted != null) 'is_completed': isCompleted,
       if (createdAt != null) 'created_at': createdAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -2144,6 +2349,8 @@ class StudySessionsCompanion extends UpdateCompanion<StudySessionRow> {
     Value<DateTime?>? startsAt,
     Value<int>? durationMinutes,
     Value<int>? focusLevelIndex,
+    Value<bool>? reminderEnabled,
+    Value<int>? reminderMinutesBefore,
     Value<bool>? isCompleted,
     Value<DateTime>? createdAt,
     Value<DateTime?>? deletedAt,
@@ -2156,6 +2363,9 @@ class StudySessionsCompanion extends UpdateCompanion<StudySessionRow> {
       startsAt: startsAt ?? this.startsAt,
       durationMinutes: durationMinutes ?? this.durationMinutes,
       focusLevelIndex: focusLevelIndex ?? this.focusLevelIndex,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      reminderMinutesBefore:
+          reminderMinutesBefore ?? this.reminderMinutesBefore,
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -2186,6 +2396,14 @@ class StudySessionsCompanion extends UpdateCompanion<StudySessionRow> {
     if (focusLevelIndex.present) {
       map['focus_level_index'] = Variable<int>(focusLevelIndex.value);
     }
+    if (reminderEnabled.present) {
+      map['reminder_enabled'] = Variable<bool>(reminderEnabled.value);
+    }
+    if (reminderMinutesBefore.present) {
+      map['reminder_minutes_before'] = Variable<int>(
+        reminderMinutesBefore.value,
+      );
+    }
     if (isCompleted.present) {
       map['is_completed'] = Variable<bool>(isCompleted.value);
     }
@@ -2208,6 +2426,8 @@ class StudySessionsCompanion extends UpdateCompanion<StudySessionRow> {
           ..write('startsAt: $startsAt, ')
           ..write('durationMinutes: $durationMinutes, ')
           ..write('focusLevelIndex: $focusLevelIndex, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderMinutesBefore: $reminderMinutesBefore, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('createdAt: $createdAt, ')
           ..write('deletedAt: $deletedAt')
@@ -5175,6 +5395,8 @@ typedef $$AcademicTasksTableCreateCompanionBuilder =
       Value<String?> description,
       Value<DateTime?> dueDate,
       required int priorityIndex,
+      Value<bool> reminderEnabled,
+      Value<int> reminderMinutesBefore,
       Value<bool> isCompleted,
       Value<DateTime> createdAt,
       Value<DateTime?> deletedAt,
@@ -5187,6 +5409,8 @@ typedef $$AcademicTasksTableUpdateCompanionBuilder =
       Value<String?> description,
       Value<DateTime?> dueDate,
       Value<int> priorityIndex,
+      Value<bool> reminderEnabled,
+      Value<int> reminderMinutesBefore,
       Value<bool> isCompleted,
       Value<DateTime> createdAt,
       Value<DateTime?> deletedAt,
@@ -5251,6 +5475,16 @@ class $$AcademicTasksTableFilterComposer
 
   ColumnFilters<int> get priorityIndex => $composableBuilder(
     column: $table.priorityIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderMinutesBefore => $composableBuilder(
+    column: $table.reminderMinutesBefore,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5327,6 +5561,16 @@ class $$AcademicTasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderMinutesBefore => $composableBuilder(
+    column: $table.reminderMinutesBefore,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isCompleted => $composableBuilder(
     column: $table.isCompleted,
     builder: (column) => ColumnOrderings(column),
@@ -5391,6 +5635,16 @@ class $$AcademicTasksTableAnnotationComposer
 
   GeneratedColumn<int> get priorityIndex => $composableBuilder(
     column: $table.priorityIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderMinutesBefore => $composableBuilder(
+    column: $table.reminderMinutesBefore,
     builder: (column) => column,
   );
 
@@ -5463,6 +5717,8 @@ class $$AcademicTasksTableTableManager
                 Value<String?> description = const Value.absent(),
                 Value<DateTime?> dueDate = const Value.absent(),
                 Value<int> priorityIndex = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<int> reminderMinutesBefore = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -5473,6 +5729,8 @@ class $$AcademicTasksTableTableManager
                 description: description,
                 dueDate: dueDate,
                 priorityIndex: priorityIndex,
+                reminderEnabled: reminderEnabled,
+                reminderMinutesBefore: reminderMinutesBefore,
                 isCompleted: isCompleted,
                 createdAt: createdAt,
                 deletedAt: deletedAt,
@@ -5485,6 +5743,8 @@ class $$AcademicTasksTableTableManager
                 Value<String?> description = const Value.absent(),
                 Value<DateTime?> dueDate = const Value.absent(),
                 required int priorityIndex,
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<int> reminderMinutesBefore = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -5495,6 +5755,8 @@ class $$AcademicTasksTableTableManager
                 description: description,
                 dueDate: dueDate,
                 priorityIndex: priorityIndex,
+                reminderEnabled: reminderEnabled,
+                reminderMinutesBefore: reminderMinutesBefore,
                 isCompleted: isCompleted,
                 createdAt: createdAt,
                 deletedAt: deletedAt,
@@ -5575,6 +5837,8 @@ typedef $$StudySessionsTableCreateCompanionBuilder =
       Value<DateTime?> startsAt,
       required int durationMinutes,
       required int focusLevelIndex,
+      Value<bool> reminderEnabled,
+      Value<int> reminderMinutesBefore,
       Value<bool> isCompleted,
       Value<DateTime> createdAt,
       Value<DateTime?> deletedAt,
@@ -5588,6 +5852,8 @@ typedef $$StudySessionsTableUpdateCompanionBuilder =
       Value<DateTime?> startsAt,
       Value<int> durationMinutes,
       Value<int> focusLevelIndex,
+      Value<bool> reminderEnabled,
+      Value<int> reminderMinutesBefore,
       Value<bool> isCompleted,
       Value<DateTime> createdAt,
       Value<DateTime?> deletedAt,
@@ -5658,6 +5924,16 @@ class $$StudySessionsTableFilterComposer
 
   ColumnFilters<int> get focusLevelIndex => $composableBuilder(
     column: $table.focusLevelIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderMinutesBefore => $composableBuilder(
+    column: $table.reminderMinutesBefore,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5739,6 +6015,16 @@ class $$StudySessionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderMinutesBefore => $composableBuilder(
+    column: $table.reminderMinutesBefore,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isCompleted => $composableBuilder(
     column: $table.isCompleted,
     builder: (column) => ColumnOrderings(column),
@@ -5806,6 +6092,16 @@ class $$StudySessionsTableAnnotationComposer
 
   GeneratedColumn<int> get focusLevelIndex => $composableBuilder(
     column: $table.focusLevelIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderMinutesBefore => $composableBuilder(
+    column: $table.reminderMinutesBefore,
     builder: (column) => column,
   );
 
@@ -5879,6 +6175,8 @@ class $$StudySessionsTableTableManager
                 Value<DateTime?> startsAt = const Value.absent(),
                 Value<int> durationMinutes = const Value.absent(),
                 Value<int> focusLevelIndex = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<int> reminderMinutesBefore = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -5890,6 +6188,8 @@ class $$StudySessionsTableTableManager
                 startsAt: startsAt,
                 durationMinutes: durationMinutes,
                 focusLevelIndex: focusLevelIndex,
+                reminderEnabled: reminderEnabled,
+                reminderMinutesBefore: reminderMinutesBefore,
                 isCompleted: isCompleted,
                 createdAt: createdAt,
                 deletedAt: deletedAt,
@@ -5903,6 +6203,8 @@ class $$StudySessionsTableTableManager
                 Value<DateTime?> startsAt = const Value.absent(),
                 required int durationMinutes,
                 required int focusLevelIndex,
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<int> reminderMinutesBefore = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -5914,6 +6216,8 @@ class $$StudySessionsTableTableManager
                 startsAt: startsAt,
                 durationMinutes: durationMinutes,
                 focusLevelIndex: focusLevelIndex,
+                reminderEnabled: reminderEnabled,
+                reminderMinutesBefore: reminderMinutesBefore,
                 isCompleted: isCompleted,
                 createdAt: createdAt,
                 deletedAt: deletedAt,

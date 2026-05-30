@@ -23,6 +23,12 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
         .watch();
   }
 
+  Future<TaskRow?> getById(int id) {
+    return (select(
+      academicTasks,
+    )..where((table) => table.id.equals(id))).getSingleOrNull();
+  }
+
   Future<int> insertTask(AcademicTasksCompanion task) {
     return into(academicTasks).insert(task);
   }

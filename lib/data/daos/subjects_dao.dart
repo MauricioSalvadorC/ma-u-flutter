@@ -19,6 +19,12 @@ class SubjectsDao extends DatabaseAccessor<AppDatabase>
         .get();
   }
 
+  Future<SubjectRow?> getById(String id) {
+    return (select(
+      subjects,
+    )..where((table) => table.id.equals(id))).getSingleOrNull();
+  }
+
   Stream<List<SubjectRow>> watchDeleted() {
     return (select(subjects)
           ..where((table) => table.deletedAt.isNotNull())

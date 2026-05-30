@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/formatters/app_date_formatter.dart';
+import '../../../core/notifications/notification_service.dart';
+import '../../../core/settings/app_settings_repository.dart';
 import '../../../core/widgets/app_detail_bottom_sheet.dart';
 import '../../../core/widgets/destructive_confirmation_dialog.dart';
 import '../../../data/database/app_database_provider.dart';
@@ -22,6 +24,7 @@ class _StudyAgendaScreenState extends State<StudyAgendaScreen> {
   late final SubjectRepository _subjectRepository;
   late final ScheduleRepository _scheduleRepository;
   late final StudySessionRepository _studyRepository;
+  late final AppSettingsRepository _settingsRepository;
   late final Future<void> _seedFuture;
 
   @override
@@ -31,6 +34,7 @@ class _StudyAgendaScreenState extends State<StudyAgendaScreen> {
     _subjectRepository = SubjectRepository(database);
     _scheduleRepository = ScheduleRepository(database);
     _studyRepository = StudySessionRepository(database);
+    _settingsRepository = AppSettingsRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
@@ -41,11 +45,19 @@ class _StudyAgendaScreenState extends State<StudyAgendaScreen> {
     List<Subject> subjects, {
     StudySession? initialSession,
   }) async {
+    final defaultReminderMinutes =
+        await _settingsRepository.getStudyReminderMinutes() ??
+        MaUNotifications.defaultStudyReminderMinutes;
+    if (!mounted) {
+      return;
+    }
+
     final session = await showDialog<StudySession>(
       context: context,
       builder: (_) => _StudySessionFormDialog(
         subjects: subjects,
         initialSession: initialSession,
+        defaultReminderMinutes: defaultReminderMinutes,
       ),
     );
 
@@ -425,6 +437,13 @@ class _StudySessionCard extends StatelessWidget {
                             ),
                             color: const Color(0xFF0F766E),
                           ),
+                        if (session.reminderEnabled && startsAt != null)
+                          _StudyChip(
+                            label: _reminderLabel(
+                              session.reminderMinutesBefore,
+                            ),
+                            color: const Color(0xFF7C3AED),
+                          ),
                       ],
                     ),
                   ],
@@ -492,6 +511,11 @@ class _StudySessionCard extends StatelessWidget {
           _StudyDetailRow(
             label: 'Fecha',
             value: AppDateFormatter.dateWithOptionalTime(startsAt),
+          ),
+        if (session.reminderEnabled && startsAt != null)
+          _StudyDetailRow(
+            label: 'Recordatorio',
+            value: _reminderLabel(session.reminderMinutesBefore),
           ),
         if (session.notes.isNotEmpty)
           _StudyDetailRow(label: 'Notas', value: session.notes),
@@ -642,9 +666,14 @@ class _StudyChip extends StatelessWidget {
 }
 
 class _StudySessionFormDialog extends StatefulWidget {
-  const _StudySessionFormDialog({required this.subjects, this.initialSession});
+  const _StudySessionFormDialog({
+    required this.subjects,
+    required this.defaultReminderMinutes,
+    this.initialSession,
+  });
 
   final List<Subject> subjects;
+  final int defaultReminderMinutes;
   final StudySession? initialSession;
 
   @override
@@ -661,11 +690,14 @@ class _StudySessionFormDialogState extends State<_StudySessionFormDialog> {
   FocusLevel _focusLevel = FocusLevel.deep;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+  bool _reminderEnabled = true;
+  late int _reminderMinutesBefore;
 
   @override
   void initState() {
     super.initState();
     final session = widget.initialSession;
+    _reminderMinutesBefore = widget.defaultReminderMinutes;
     _subjectId =
         session?.subjectId ??
         (widget.subjects.isEmpty ? '' : widget.subjects.first.id);
@@ -674,6 +706,8 @@ class _StudySessionFormDialogState extends State<_StudySessionFormDialog> {
       _notesController.text = session.notes;
       _durationController.text = session.durationMinutes.toString();
       _focusLevel = session.focusLevel;
+      _reminderEnabled = session.reminderEnabled;
+      _reminderMinutesBefore = session.reminderMinutesBefore;
       final startsAt = session.startsAt;
       if (startsAt != null) {
         _selectedDate = startsAt;
@@ -728,12 +762,41 @@ class _StudySessionFormDialogState extends State<_StudySessionFormDialog> {
     setState(() {
       _selectedDate = null;
       _selectedTime = null;
+      _reminderEnabled = false;
     });
   }
 
   void _clearTime() {
     setState(() {
       _selectedTime = null;
+    });
+  }
+
+  Future<void> _toggleReminder(bool enabled) async {
+    if (!enabled) {
+      setState(() {
+        _reminderEnabled = false;
+      });
+      return;
+    }
+
+    if (_selectedDate == null) {
+      _showSnackBar('Primero elige fecha para la sesion.');
+      return;
+    }
+
+    final granted = await MaUNotifications.instance.requestPermission();
+    if (!mounted) {
+      return;
+    }
+
+    if (!granted) {
+      _showSnackBar('Activa las notificaciones del sistema para recordarte.');
+      return;
+    }
+
+    setState(() {
+      _reminderEnabled = true;
     });
   }
 
@@ -753,9 +816,31 @@ class _StudySessionFormDialogState extends State<_StudySessionFormDialog> {
     );
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
       return;
+    }
+
+    final startsAt = _buildStartsAt();
+    final reminderEnabled = _reminderEnabled && startsAt != null;
+    if (reminderEnabled &&
+        !MaUNotifications.instance.canSchedule(
+          startsAt,
+          _reminderMinutesBefore,
+        )) {
+      _showSnackBar('Ese recordatorio queda en el pasado. Ajusta la hora.');
+      return;
+    }
+
+    if (reminderEnabled) {
+      final granted = await MaUNotifications.instance.requestPermission();
+      if (!mounted) {
+        return;
+      }
+      if (!granted) {
+        _showSnackBar('Activa las notificaciones del sistema para recordarte.');
+        return;
+      }
     }
 
     Navigator.of(context).pop(
@@ -764,13 +849,21 @@ class _StudySessionFormDialogState extends State<_StudySessionFormDialog> {
         subjectId: _subjectId,
         title: _titleController.text.trim(),
         notes: _notesController.text.trim(),
-        startsAt: _buildStartsAt(),
+        startsAt: startsAt,
         durationMinutes: int.parse(_durationController.text.trim()),
         focusLevel: _focusLevel,
+        reminderEnabled: reminderEnabled,
+        reminderMinutesBefore: _reminderMinutesBefore,
         isCompleted: widget.initialSession?.isCompleted ?? false,
         deletedAt: widget.initialSession?.deletedAt,
       ),
     );
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -908,6 +1001,39 @@ class _StudySessionFormDialogState extends State<_StudySessionFormDialog> {
                   ],
                 ),
               ],
+              const SizedBox(height: 10),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Recordarme'),
+                subtitle: Text(
+                  _selectedDate == null
+                      ? 'Elige fecha para activar recordatorio.'
+                      : 'Ma-U te avisara antes del bloque.',
+                ),
+                value: _reminderEnabled && _selectedDate != null,
+                onChanged: _selectedDate == null ? null : _toggleReminder,
+              ),
+              if (_reminderEnabled && _selectedDate != null) ...[
+                const SizedBox(height: 10),
+                DropdownButtonFormField<int>(
+                  initialValue: _reminderMinutesBefore,
+                  decoration: const InputDecoration(labelText: 'Avisar'),
+                  items: [
+                    for (final option in MaUNotifications.reminderOptions)
+                      DropdownMenuItem(
+                        value: option.minutesBefore,
+                        child: Text(option.label),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _reminderMinutesBefore = value;
+                      });
+                    }
+                  },
+                ),
+              ],
             ],
           ),
         ),
@@ -921,4 +1047,15 @@ class _StudySessionFormDialogState extends State<_StudySessionFormDialog> {
       ],
     );
   }
+}
+
+String _reminderLabel(int minutesBefore) {
+  return switch (minutesBefore) {
+    5 => '5 min antes',
+    10 => '10 min antes',
+    30 => '30 min antes',
+    60 => '1 hora antes',
+    1440 => '1 dia antes',
+    _ => '$minutesBefore min antes',
+  };
 }

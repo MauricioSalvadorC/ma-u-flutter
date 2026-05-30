@@ -24,6 +24,12 @@ class StudySessionsDao extends DatabaseAccessor<AppDatabase>
         .watch();
   }
 
+  Future<StudySessionRow?> getById(int id) {
+    return (select(
+      studySessions,
+    )..where((table) => table.id.equals(id))).getSingleOrNull();
+  }
+
   Future<int> insertSession(StudySessionsCompanion session) {
     return into(studySessions).insert(session);
   }

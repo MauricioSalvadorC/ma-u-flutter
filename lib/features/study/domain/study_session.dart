@@ -17,6 +17,8 @@ class StudySession {
     required this.startsAt,
     required this.durationMinutes,
     required this.focusLevel,
+    required this.reminderEnabled,
+    required this.reminderMinutesBefore,
     required this.isCompleted,
     required this.deletedAt,
   });
@@ -28,6 +30,8 @@ class StudySession {
   final DateTime? startsAt;
   final int durationMinutes;
   final FocusLevel focusLevel;
+  final bool reminderEnabled;
+  final int reminderMinutesBefore;
   final bool isCompleted;
   final DateTime? deletedAt;
 
@@ -39,6 +43,8 @@ class StudySession {
     DateTime? startsAt,
     int? durationMinutes,
     FocusLevel? focusLevel,
+    bool? reminderEnabled,
+    int? reminderMinutesBefore,
     bool? isCompleted,
     DateTime? deletedAt,
   }) {
@@ -50,6 +56,9 @@ class StudySession {
       startsAt: startsAt ?? this.startsAt,
       durationMinutes: durationMinutes ?? this.durationMinutes,
       focusLevel: focusLevel ?? this.focusLevel,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      reminderMinutesBefore:
+          reminderMinutesBefore ?? this.reminderMinutesBefore,
       isCompleted: isCompleted ?? this.isCompleted,
       deletedAt: deletedAt ?? this.deletedAt,
     );

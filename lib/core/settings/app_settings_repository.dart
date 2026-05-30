@@ -34,6 +34,8 @@ class AppSettingsRepository {
   static const _universityNameKey = 'university_name';
   static const _careerNameKey = 'career_name';
   static const _currentSemesterKey = 'current_semester';
+  static const _taskReminderMinutesKey = 'task_reminder_minutes';
+  static const _studyReminderMinutesKey = 'study_reminder_minutes';
 
   final AppDatabase _database;
 
@@ -94,6 +96,18 @@ class AppSettingsRepository {
     return await _database.settingsDao.getValue(_currentSemesterKey) ?? '';
   }
 
+  Future<int?> getTaskReminderMinutes() async {
+    final value = await _database.settingsDao.getValue(_taskReminderMinutesKey);
+    return int.tryParse(value ?? '');
+  }
+
+  Future<int?> getStudyReminderMinutes() async {
+    final value = await _database.settingsDao.getValue(
+      _studyReminderMinutesKey,
+    );
+    return int.tryParse(value ?? '');
+  }
+
   Future<void> setThemeMode(ThemeMode themeMode) {
     return _database.settingsDao.setValue(
       key: _themeModeKey,
@@ -152,6 +166,20 @@ class AppSettingsRepository {
     await _database.settingsDao.setValue(
       key: _currentSemesterKey,
       value: currentSemester,
+    );
+  }
+
+  Future<void> setTaskReminderMinutes(int minutes) {
+    return _database.settingsDao.setValue(
+      key: _taskReminderMinutesKey,
+      value: minutes.toString(),
+    );
+  }
+
+  Future<void> setStudyReminderMinutes(int minutes) {
+    return _database.settingsDao.setValue(
+      key: _studyReminderMinutesKey,
+      value: minutes.toString(),
     );
   }
 }

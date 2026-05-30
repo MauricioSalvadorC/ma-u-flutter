@@ -16,6 +16,8 @@ class AcademicTask {
     required this.description,
     required this.dueDate,
     required this.priority,
+    required this.reminderEnabled,
+    required this.reminderMinutesBefore,
     required this.isCompleted,
     required this.deletedAt,
   });
@@ -26,6 +28,8 @@ class AcademicTask {
   final String description;
   final DateTime? dueDate;
   final TaskPriority priority;
+  final bool reminderEnabled;
+  final int reminderMinutesBefore;
   final bool isCompleted;
   final DateTime? deletedAt;
 
@@ -36,6 +40,8 @@ class AcademicTask {
     String? description,
     DateTime? dueDate,
     TaskPriority? priority,
+    bool? reminderEnabled,
+    int? reminderMinutesBefore,
     bool? isCompleted,
     DateTime? deletedAt,
   }) {
@@ -46,6 +52,9 @@ class AcademicTask {
       description: description ?? this.description,
       dueDate: dueDate ?? this.dueDate,
       priority: priority ?? this.priority,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      reminderMinutesBefore:
+          reminderMinutesBefore ?? this.reminderMinutesBefore,
       isCompleted: isCompleted ?? this.isCompleted,
       deletedAt: deletedAt ?? this.deletedAt,
     );

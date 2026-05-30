@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/formatters/app_date_formatter.dart';
+import '../../../core/notifications/notification_service.dart';
+import '../../../core/settings/app_settings_repository.dart';
 import '../../../core/widgets/app_detail_bottom_sheet.dart';
 import '../../../core/widgets/destructive_confirmation_dialog.dart';
 import '../../../data/database/app_database_provider.dart';
@@ -22,6 +24,7 @@ class _TasksScreenState extends State<TasksScreen> {
   late final SubjectRepository _subjectRepository;
   late final ScheduleRepository _scheduleRepository;
   late final TaskRepository _taskRepository;
+  late final AppSettingsRepository _settingsRepository;
   late final Future<void> _seedFuture;
 
   @override
@@ -31,6 +34,7 @@ class _TasksScreenState extends State<TasksScreen> {
     _subjectRepository = SubjectRepository(database);
     _scheduleRepository = ScheduleRepository(database);
     _taskRepository = TaskRepository(database);
+    _settingsRepository = AppSettingsRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
@@ -41,10 +45,20 @@ class _TasksScreenState extends State<TasksScreen> {
     List<Subject> subjects, {
     AcademicTask? initialTask,
   }) async {
+    final defaultReminderMinutes =
+        await _settingsRepository.getTaskReminderMinutes() ??
+        MaUNotifications.defaultTaskReminderMinutes;
+    if (!mounted) {
+      return;
+    }
+
     final task = await showDialog<AcademicTask>(
       context: context,
-      builder: (_) =>
-          _TaskFormDialog(subjects: subjects, initialTask: initialTask),
+      builder: (_) => _TaskFormDialog(
+        subjects: subjects,
+        initialTask: initialTask,
+        defaultReminderMinutes: defaultReminderMinutes,
+      ),
     );
 
     if (task != null) {
@@ -411,6 +425,11 @@ class _TaskCard extends StatelessWidget {
                             ),
                             color: colorScheme.primary,
                           ),
+                        if (task.reminderEnabled && dueDate != null)
+                          _TaskChip(
+                            label: _reminderLabel(task.reminderMinutesBefore),
+                            color: const Color(0xFF7C3AED),
+                          ),
                       ],
                     ),
                   ],
@@ -471,6 +490,11 @@ class _TaskCard extends StatelessWidget {
           _TaskDetailRow(
             label: 'Fecha limite',
             value: AppDateFormatter.dateWithOptionalTime(dueDate),
+          ),
+        if (task.reminderEnabled && dueDate != null)
+          _TaskDetailRow(
+            label: 'Recordatorio',
+            value: _reminderLabel(task.reminderMinutesBefore),
           ),
         if (task.description.isNotEmpty)
           _TaskDetailRow(label: 'Descripcion', value: task.description),
@@ -621,9 +645,14 @@ class _TaskChip extends StatelessWidget {
 }
 
 class _TaskFormDialog extends StatefulWidget {
-  const _TaskFormDialog({required this.subjects, this.initialTask});
+  const _TaskFormDialog({
+    required this.subjects,
+    required this.defaultReminderMinutes,
+    this.initialTask,
+  });
 
   final List<Subject> subjects;
+  final int defaultReminderMinutes;
   final AcademicTask? initialTask;
 
   @override
@@ -638,11 +667,14 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
   TaskPriority _priority = TaskPriority.medium;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+  bool _reminderEnabled = true;
+  late int _reminderMinutesBefore;
 
   @override
   void initState() {
     super.initState();
     final task = widget.initialTask;
+    _reminderMinutesBefore = widget.defaultReminderMinutes;
     _subjectId =
         task?.subjectId ??
         (widget.subjects.isEmpty ? '' : widget.subjects.first.id);
@@ -650,6 +682,8 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
       _titleController.text = task.title;
       _descriptionController.text = task.description;
       _priority = task.priority;
+      _reminderEnabled = task.reminderEnabled;
+      _reminderMinutesBefore = task.reminderMinutesBefore;
       final dueDate = task.dueDate;
       if (dueDate != null) {
         _selectedDate = dueDate;
@@ -702,6 +736,34 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
     });
   }
 
+  Future<void> _toggleReminder(bool enabled) async {
+    if (!enabled) {
+      setState(() {
+        _reminderEnabled = false;
+      });
+      return;
+    }
+
+    if (_selectedDate == null) {
+      _showSnackBar('Primero elige una fecha para la tarea.');
+      return;
+    }
+
+    final granted = await MaUNotifications.instance.requestPermission();
+    if (!mounted) {
+      return;
+    }
+
+    if (!granted) {
+      _showSnackBar('Activa las notificaciones del sistema para recordarte.');
+      return;
+    }
+
+    setState(() {
+      _reminderEnabled = true;
+    });
+  }
+
   DateTime? _buildDueDate() {
     final selectedDate = _selectedDate;
     if (selectedDate == null) {
@@ -718,9 +780,31 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
     );
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
       return;
+    }
+
+    final dueDate = _buildDueDate();
+    final reminderEnabled = _reminderEnabled && dueDate != null;
+    if (reminderEnabled &&
+        !MaUNotifications.instance.canSchedule(
+          dueDate,
+          _reminderMinutesBefore,
+        )) {
+      _showSnackBar('Ese recordatorio queda en el pasado. Ajusta la hora.');
+      return;
+    }
+
+    if (reminderEnabled) {
+      final granted = await MaUNotifications.instance.requestPermission();
+      if (!mounted) {
+        return;
+      }
+      if (!granted) {
+        _showSnackBar('Activa las notificaciones del sistema para recordarte.');
+        return;
+      }
     }
 
     Navigator.of(context).pop(
@@ -729,12 +813,20 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
         subjectId: _subjectId,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        dueDate: _buildDueDate(),
+        dueDate: dueDate,
         priority: _priority,
+        reminderEnabled: reminderEnabled,
+        reminderMinutesBefore: _reminderMinutesBefore,
         isCompleted: widget.initialTask?.isCompleted ?? false,
         deletedAt: widget.initialTask?.deletedAt,
       ),
     );
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -842,6 +934,39 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
                   label: const Text('Quitar hora'),
                 ),
               ],
+              const SizedBox(height: 10),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Recordarme'),
+                subtitle: Text(
+                  _selectedDate == null
+                      ? 'Elige una fecha para activar recordatorio.'
+                      : 'Ma-U te avisara antes de la entrega.',
+                ),
+                value: _reminderEnabled && _selectedDate != null,
+                onChanged: _selectedDate == null ? null : _toggleReminder,
+              ),
+              if (_reminderEnabled && _selectedDate != null) ...[
+                const SizedBox(height: 10),
+                DropdownButtonFormField<int>(
+                  initialValue: _reminderMinutesBefore,
+                  decoration: const InputDecoration(labelText: 'Avisar'),
+                  items: [
+                    for (final option in MaUNotifications.reminderOptions)
+                      DropdownMenuItem(
+                        value: option.minutesBefore,
+                        child: Text(option.label),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _reminderMinutesBefore = value;
+                      });
+                    }
+                  },
+                ),
+              ],
             ],
           ),
         ),
@@ -855,4 +980,15 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
       ],
     );
   }
+}
+
+String _reminderLabel(int minutesBefore) {
+  return switch (minutesBefore) {
+    5 => '5 min antes',
+    10 => '10 min antes',
+    30 => '30 min antes',
+    60 => '1 hora antes',
+    1440 => '1 dia antes',
+    _ => '$minutesBefore min antes',
+  };
 }
