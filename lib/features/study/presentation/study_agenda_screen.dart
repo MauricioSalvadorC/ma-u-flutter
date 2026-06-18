@@ -14,7 +14,9 @@ import '../data/study_session_repository.dart';
 import '../domain/study_session.dart';
 
 class StudyAgendaScreen extends StatefulWidget {
-  const StudyAgendaScreen({super.key});
+  const StudyAgendaScreen({super.key, this.initialSubjectId});
+
+  final String? initialSubjectId;
 
   @override
   State<StudyAgendaScreen> createState() => _StudyAgendaScreenState();
@@ -120,6 +122,7 @@ class _StudyAgendaScreenState extends State<StudyAgendaScreen> {
                 return _StudyAgendaView(
                   subjects: subjects,
                   sessions: sessions,
+                  initialSubjectId: widget.initialSubjectId,
                   onAdd: () => _openForm(subjects),
                   onEdit: (session) =>
                       _openForm(subjects, initialSession: session),
@@ -139,6 +142,7 @@ class _StudyAgendaView extends StatefulWidget {
   const _StudyAgendaView({
     required this.subjects,
     required this.sessions,
+    required this.initialSubjectId,
     required this.onAdd,
     required this.onEdit,
     required this.onToggle,
@@ -147,6 +151,7 @@ class _StudyAgendaView extends StatefulWidget {
 
   final List<Subject> subjects;
   final List<StudySession> sessions;
+  final String? initialSubjectId;
   final VoidCallback onAdd;
   final ValueChanged<StudySession> onEdit;
   final ValueChanged<StudySession> onToggle;
@@ -164,21 +169,33 @@ class _StudyAgendaViewState extends State<_StudyAgendaView> {
     final activeSubjectIds = widget.subjects
         .map((subject) => subject.id)
         .toSet();
-    final visibleSessions = widget.sessions
+    final scopedSessions = widget.initialSubjectId == null
+        ? widget.sessions
+        : widget.sessions
+              .where((session) => session.subjectId == widget.initialSubjectId)
+              .toList();
+    final visibleSessions = scopedSessions
         .where((session) => activeSubjectIds.contains(session.subjectId))
         .where(_matchesFilter)
         .toList();
-    final pendingCount = widget.sessions
+    final pendingCount = scopedSessions
         .where((session) => activeSubjectIds.contains(session.subjectId))
         .where((session) => !session.isCompleted)
         .length;
-    final totalMinutes = widget.sessions
+    final totalMinutes = scopedSessions
         .where((session) => activeSubjectIds.contains(session.subjectId))
         .where((session) => !session.isCompleted)
         .fold<int>(0, (total, session) => total + session.durationMinutes);
+    final selectedSubject = _subjectFor(widget.initialSubjectId);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Agenda de estudio')),
+      appBar: AppBar(
+        title: Text(
+          selectedSubject == null
+              ? 'Agenda de estudio'
+              : 'Estudio de ${selectedSubject.name}',
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: widget.onAdd,
         icon: const Icon(Icons.add_outlined),
@@ -221,6 +238,20 @@ class _StudyAgendaViewState extends State<_StudyAgendaView> {
         ),
       ),
     );
+  }
+
+  Subject? _subjectFor(String? subjectId) {
+    if (subjectId == null) {
+      return null;
+    }
+
+    for (final subject in widget.subjects) {
+      if (subject.id == subjectId) {
+        return subject;
+      }
+    }
+
+    return null;
   }
 
   bool _matchesFilter(StudySession session) {

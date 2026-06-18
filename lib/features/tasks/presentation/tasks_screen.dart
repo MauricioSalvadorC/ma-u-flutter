@@ -14,7 +14,9 @@ import '../data/task_repository.dart';
 import '../domain/academic_task.dart';
 
 class TasksScreen extends StatefulWidget {
-  const TasksScreen({super.key});
+  const TasksScreen({super.key, this.initialSubjectId});
+
+  final String? initialSubjectId;
 
   @override
   State<TasksScreen> createState() => _TasksScreenState();
@@ -119,6 +121,7 @@ class _TasksScreenState extends State<TasksScreen> {
                 return _TasksView(
                   subjects: subjects,
                   tasks: tasks,
+                  initialSubjectId: widget.initialSubjectId,
                   onAddTask: () => _openTaskForm(subjects),
                   onEditTask: (task) =>
                       _openTaskForm(subjects, initialTask: task),
@@ -138,6 +141,7 @@ class _TasksView extends StatefulWidget {
   const _TasksView({
     required this.subjects,
     required this.tasks,
+    required this.initialSubjectId,
     required this.onAddTask,
     required this.onEditTask,
     required this.onToggleTask,
@@ -146,6 +150,7 @@ class _TasksView extends StatefulWidget {
 
   final List<Subject> subjects;
   final List<AcademicTask> tasks;
+  final String? initialSubjectId;
   final VoidCallback onAddTask;
   final ValueChanged<AcademicTask> onEditTask;
   final ValueChanged<AcademicTask> onToggleTask;
@@ -160,12 +165,24 @@ class _TasksViewState extends State<_TasksView> {
 
   @override
   Widget build(BuildContext context) {
-    final pendingCount = widget.tasks.where((task) => !task.isCompleted).length;
-    final completedCount = widget.tasks.length - pendingCount;
-    final filteredTasks = widget.tasks.where(_matchesFilter).toList();
+    final scopedTasks = widget.initialSubjectId == null
+        ? widget.tasks
+        : widget.tasks
+              .where((task) => task.subjectId == widget.initialSubjectId)
+              .toList();
+    final pendingCount = scopedTasks.where((task) => !task.isCompleted).length;
+    final completedCount = scopedTasks.length - pendingCount;
+    final filteredTasks = scopedTasks.where(_matchesFilter).toList();
+    final selectedSubject = _subjectFor(widget.initialSubjectId);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tareas')),
+      appBar: AppBar(
+        title: Text(
+          selectedSubject == null
+              ? 'Tareas'
+              : 'Tareas de ${selectedSubject.name}',
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: widget.onAddTask,
         icon: const Icon(Icons.add_task_outlined),
@@ -216,6 +233,20 @@ class _TasksViewState extends State<_TasksView> {
         ),
       ),
     );
+  }
+
+  Subject? _subjectFor(String? subjectId) {
+    if (subjectId == null) {
+      return null;
+    }
+
+    for (final subject in widget.subjects) {
+      if (subject.id == subjectId) {
+        return subject;
+      }
+    }
+
+    return null;
   }
 
   bool _matchesFilter(AcademicTask task) {

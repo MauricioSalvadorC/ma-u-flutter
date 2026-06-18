@@ -7,6 +7,7 @@ import '../../notes/data/note_repository.dart';
 import '../../notes/domain/academic_note.dart';
 import '../../notes/presentation/notes_screen.dart';
 import '../../schedule/data/academic_seed_service.dart';
+import '../../subjects/presentation/subject_profile_screen.dart';
 import '../../subjects/data/subject_repository.dart';
 import '../../subjects/domain/subject.dart';
 import '../data/schedule_repository.dart';
@@ -489,6 +490,8 @@ class _SessionCard extends StatelessWidget {
                   switch (action) {
                     case _ItemAction.view:
                       _showSessionDetails(context);
+                    case _ItemAction.profile:
+                      return;
                     case _ItemAction.notes:
                       return;
                     case _ItemAction.edit:
@@ -710,7 +713,7 @@ class _SubjectCard extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        onTap: () => _showSubjectDetails(context),
+        onTap: () => _openSubjectProfile(context),
         onLongPress: () => _showSubjectActions(context),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -765,6 +768,8 @@ class _SubjectCard extends StatelessWidget {
                   switch (action) {
                     case _ItemAction.view:
                       _showSubjectDetails(context);
+                    case _ItemAction.profile:
+                      _openSubjectProfile(context);
                     case _ItemAction.notes:
                       _openSubjectNotes(context);
                     case _ItemAction.edit:
@@ -777,6 +782,10 @@ class _SubjectCard extends StatelessWidget {
                   PopupMenuItem(
                     value: _ItemAction.view,
                     child: Text('Ver detalle'),
+                  ),
+                  PopupMenuItem(
+                    value: _ItemAction.profile,
+                    child: Text('Perfil de materia'),
                   ),
                   PopupMenuItem(
                     value: _ItemAction.notes,
@@ -814,6 +823,18 @@ class _SubjectCard extends StatelessWidget {
           value: subject.credits.toString(),
         ),
         _AcademicDetailRow(label: 'Apuntes', value: noteCount.toString()),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _openSubjectProfile(context);
+            },
+            icon: const Icon(Icons.dashboard_customize_outlined),
+            label: const Text('Abrir perfil'),
+          ),
+        ),
         const SizedBox(height: 10),
         SizedBox(
           width: double.infinity,
@@ -865,6 +886,10 @@ class _SubjectCard extends StatelessWidget {
           Navigator.of(context).pop();
           _showSubjectDetails(context);
         },
+        onProfile: () {
+          Navigator.of(context).pop();
+          _openSubjectProfile(context);
+        },
         onEdit: () {
           Navigator.of(context).pop();
           onEdit();
@@ -881,6 +906,14 @@ class _SubjectCard extends StatelessWidget {
     );
   }
 
+  void _openSubjectProfile(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SubjectProfileScreen(subject: subject),
+      ),
+    );
+  }
+
   void _openSubjectNotes(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -890,19 +923,21 @@ class _SubjectCard extends StatelessWidget {
   }
 }
 
-enum _ItemAction { view, notes, edit, delete }
+enum _ItemAction { view, profile, notes, edit, delete }
 
 class _ActionSheet extends StatelessWidget {
   const _ActionSheet({
     required this.onView,
     required this.onEdit,
     this.onNotes,
+    this.onProfile,
     required this.onDelete,
   });
 
   final VoidCallback onView;
   final VoidCallback onEdit;
   final VoidCallback? onNotes;
+  final VoidCallback? onProfile;
   final VoidCallback onDelete;
 
   @override
@@ -918,6 +953,12 @@ class _ActionSheet extends StatelessWidget {
               title: const Text('Ver detalle'),
               onTap: onView,
             ),
+            if (onProfile != null)
+              ListTile(
+                leading: const Icon(Icons.dashboard_customize_outlined),
+                title: const Text('Perfil de materia'),
+                onTap: onProfile,
+              ),
             ListTile(
               leading: const Icon(Icons.edit_outlined),
               title: const Text('Editar'),
