@@ -3,6 +3,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 part '../daos/academic_goals_dao.dart';
 part '../daos/expenses_dao.dart';
+part '../daos/notes_dao.dart';
 part '../daos/schedule_dao.dart';
 part '../daos/semesters_dao.dart';
 part '../daos/settings_dao.dart';
@@ -130,6 +131,18 @@ class Expenses extends Table {
   DateTimeColumn get deletedAt => dateTime().nullable()();
 }
 
+@DataClassName('NoteRow')
+class AcademicNotes extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get subjectId => text().nullable().references(Subjects, #id)();
+  TextColumn get title => text()();
+  TextColumn get content => text()();
+  TextColumn get tags => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+}
+
 @DriftDatabase(
   tables: [
     Subjects,
@@ -141,6 +154,7 @@ class Expenses extends Table {
     AppSettingsEntries,
     AcademicGoals,
     Expenses,
+    AcademicNotes,
   ],
   daos: [
     SubjectsDao,
@@ -151,6 +165,7 @@ class Expenses extends Table {
     SettingsDao,
     AcademicGoalsDao,
     ExpensesDao,
+    NotesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -158,7 +173,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'ma_u.sqlite'));
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration {
@@ -205,6 +220,9 @@ class AppDatabase extends _$AppDatabase {
             studySessions,
             studySessions.reminderMinutesBefore,
           );
+        }
+        if (from < 10) {
+          await migrator.createTable(academicNotes);
         }
       },
     );

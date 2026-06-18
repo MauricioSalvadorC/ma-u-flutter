@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/widgets/app_detail_bottom_sheet.dart';
 import '../../../core/widgets/destructive_confirmation_dialog.dart';
 import '../../../data/database/app_database_provider.dart';
+import '../../notes/data/note_repository.dart';
+import '../../notes/domain/academic_note.dart';
+import '../../notes/presentation/notes_screen.dart';
 import '../../schedule/data/academic_seed_service.dart';
 import '../../subjects/data/subject_repository.dart';
 import '../../subjects/domain/subject.dart';
@@ -19,6 +22,7 @@ class AcademicPlannerScreen extends StatefulWidget {
 class _AcademicPlannerScreenState extends State<AcademicPlannerScreen> {
   late final SubjectRepository _subjectRepository;
   late final ScheduleRepository _scheduleRepository;
+  late final NoteRepository _noteRepository;
   late final Future<void> _seedFuture;
 
   @override
@@ -27,6 +31,7 @@ class _AcademicPlannerScreenState extends State<AcademicPlannerScreen> {
     final database = AppDatabaseProvider.instance;
     _subjectRepository = SubjectRepository(database);
     _scheduleRepository = ScheduleRepository(database);
+    _noteRepository = NoteRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
@@ -148,18 +153,25 @@ class _AcademicPlannerScreenState extends State<AcademicPlannerScreen> {
               stream: _scheduleRepository.watchSessions(),
               builder: (context, sessionSnapshot) {
                 final sessions = sessionSnapshot.data ?? const <ClassSession>[];
-                return _AcademicPlannerView(
-                  subjects: subjects,
-                  sessions: sessions,
-                  onAddSubject: _openSubjectForm,
-                  onAddSession: () => _openSessionForm(subjects),
-                  onEditSubject: _openSubjectEditor,
-                  onDeleteSubject: _moveSubjectToTrash,
-                  onEditSession: (session) => _openSessionEditor(
-                    currentSession: session,
-                    subjects: subjects,
-                  ),
-                  onDeleteSession: _moveSessionToTrash,
+                return StreamBuilder<List<AcademicNote>>(
+                  stream: _noteRepository.watchNotes(),
+                  builder: (context, noteSnapshot) {
+                    final notes = noteSnapshot.data ?? const <AcademicNote>[];
+                    return _AcademicPlannerView(
+                      subjects: subjects,
+                      sessions: sessions,
+                      notes: notes,
+                      onAddSubject: _openSubjectForm,
+                      onAddSession: () => _openSessionForm(subjects),
+                      onEditSubject: _openSubjectEditor,
+                      onDeleteSubject: _moveSubjectToTrash,
+                      onEditSession: (session) => _openSessionEditor(
+                        currentSession: session,
+                        subjects: subjects,
+                      ),
+                      onDeleteSession: _moveSessionToTrash,
+                    );
+                  },
                 );
               },
             );
@@ -174,6 +186,7 @@ class _AcademicPlannerView extends StatelessWidget {
   const _AcademicPlannerView({
     required this.subjects,
     required this.sessions,
+    required this.notes,
     required this.onAddSubject,
     required this.onAddSession,
     required this.onEditSubject,
@@ -184,6 +197,7 @@ class _AcademicPlannerView extends StatelessWidget {
 
   final List<Subject> subjects;
   final List<ClassSession> sessions;
+  final List<AcademicNote> notes;
   final VoidCallback onAddSubject;
   final VoidCallback onAddSession;
   final ValueChanged<Subject> onEditSubject;
@@ -240,6 +254,7 @@ class _AcademicPlannerView extends StatelessWidget {
                       ),
                       _SubjectsTab(
                         subjects: subjects,
+                        notes: notes,
                         onEditSubject: onEditSubject,
                         onDeleteSubject: onDeleteSubject,
                       ),
@@ -474,6 +489,8 @@ class _SessionCard extends StatelessWidget {
                   switch (action) {
                     case _ItemAction.view:
                       _showSessionDetails(context);
+                    case _ItemAction.notes:
+                      return;
                     case _ItemAction.edit:
                       onEdit();
                     case _ItemAction.delete:
@@ -569,11 +586,13 @@ class _SessionCard extends StatelessWidget {
 class _SubjectsTab extends StatelessWidget {
   const _SubjectsTab({
     required this.subjects,
+    required this.notes,
     required this.onEditSubject,
     required this.onDeleteSubject,
   });
 
   final List<Subject> subjects;
+  final List<AcademicNote> notes;
   final ValueChanged<Subject> onEditSubject;
   final ValueChanged<Subject> onDeleteSubject;
 
@@ -592,6 +611,9 @@ class _SubjectsTab extends StatelessWidget {
         for (final subject in subjects) ...[
           _SubjectCard(
             subject: subject,
+            noteCount: notes
+                .where((note) => note.subjectId == subject.id)
+                .length,
             onEdit: () => onEditSubject(subject),
             onDelete: () => onDeleteSubject(subject),
           ),
@@ -670,11 +692,13 @@ class _SummaryTile extends StatelessWidget {
 class _SubjectCard extends StatelessWidget {
   const _SubjectCard({
     required this.subject,
+    required this.noteCount,
     required this.onEdit,
     required this.onDelete,
   });
 
   final Subject subject;
+  final int noteCount;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -722,17 +746,27 @@ class _SubjectCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _MiniBadge(label: '${subject.credits} cr'),
+                        _MiniBadge(label: '$noteCount apuntes'),
+                      ],
+                    ),
                   ],
                 ),
               ),
               const SizedBox(width: 10),
-              _MiniBadge(label: '${subject.credits} cr'),
               PopupMenuButton<_ItemAction>(
                 tooltip: 'Opciones de materia',
                 onSelected: (action) {
                   switch (action) {
                     case _ItemAction.view:
                       _showSubjectDetails(context);
+                    case _ItemAction.notes:
+                      _openSubjectNotes(context);
                     case _ItemAction.edit:
                       onEdit();
                     case _ItemAction.delete:
@@ -743,6 +777,10 @@ class _SubjectCard extends StatelessWidget {
                   PopupMenuItem(
                     value: _ItemAction.view,
                     child: Text('Ver detalle'),
+                  ),
+                  PopupMenuItem(
+                    value: _ItemAction.notes,
+                    child: Text('Ver apuntes'),
                   ),
                   PopupMenuItem(value: _ItemAction.edit, child: Text('Editar')),
                   PopupMenuItem(
@@ -774,6 +812,19 @@ class _SubjectCard extends StatelessWidget {
         _AcademicDetailRow(
           label: 'Creditos',
           value: subject.credits.toString(),
+        ),
+        _AcademicDetailRow(label: 'Apuntes', value: noteCount.toString()),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.tonalIcon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _openSubjectNotes(context);
+            },
+            icon: const Icon(Icons.edit_note_outlined),
+            label: const Text('Ver apuntes'),
+          ),
         ),
         const SizedBox(height: 10),
         Row(
@@ -818,6 +869,10 @@ class _SubjectCard extends StatelessWidget {
           Navigator.of(context).pop();
           onEdit();
         },
+        onNotes: () {
+          Navigator.of(context).pop();
+          _openSubjectNotes(context);
+        },
         onDelete: () {
           Navigator.of(context).pop();
           onDelete();
@@ -825,19 +880,29 @@ class _SubjectCard extends StatelessWidget {
       ),
     );
   }
+
+  void _openSubjectNotes(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NotesScreen(initialSubjectId: subject.id),
+      ),
+    );
+  }
 }
 
-enum _ItemAction { view, edit, delete }
+enum _ItemAction { view, notes, edit, delete }
 
 class _ActionSheet extends StatelessWidget {
   const _ActionSheet({
     required this.onView,
     required this.onEdit,
+    this.onNotes,
     required this.onDelete,
   });
 
   final VoidCallback onView;
   final VoidCallback onEdit;
+  final VoidCallback? onNotes;
   final VoidCallback onDelete;
 
   @override
@@ -858,6 +923,12 @@ class _ActionSheet extends StatelessWidget {
               title: const Text('Editar'),
               onTap: onEdit,
             ),
+            if (onNotes != null)
+              ListTile(
+                leading: const Icon(Icons.edit_note_outlined),
+                title: const Text('Ver apuntes'),
+                onTap: onNotes,
+              ),
             ListTile(
               leading: const Icon(Icons.delete_outline),
               title: const Text('Mover a papelera'),

@@ -9,6 +9,9 @@ import '../../academic_record/presentation/academic_record_screen.dart';
 import '../../expenses/data/expense_repository.dart';
 import '../../expenses/domain/university_expense.dart';
 import '../../expenses/presentation/expenses_screen.dart';
+import '../../notes/data/note_repository.dart';
+import '../../notes/domain/academic_note.dart';
+import '../../notes/presentation/notes_screen.dart';
 import '../../schedule/data/academic_seed_service.dart';
 import '../../schedule/data/schedule_repository.dart';
 import '../../schedule/domain/class_session.dart';
@@ -37,6 +40,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   late final StudySessionRepository _studyRepository;
   late final ExpenseRepository _expenseRepository;
   late final AcademicRecordRepository _recordRepository;
+  late final NoteRepository _noteRepository;
   late final Future<void> _seedFuture;
   String _query = '';
 
@@ -50,6 +54,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     _studyRepository = StudySessionRepository(database);
     _expenseRepository = ExpenseRepository(database);
     _recordRepository = AcademicRecordRepository(database);
+    _noteRepository = NoteRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
@@ -96,26 +101,34 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                             final expenses =
                                 expenseSnapshot.data ??
                                 const <UniversityExpense>[];
-                            return StreamBuilder<List<SemesterSummary>>(
-                              stream: _recordRepository.watchSummaries(),
-                              builder: (context, recordSnapshot) {
-                                final summaries =
-                                    recordSnapshot.data ??
-                                    const <SemesterSummary>[];
-                                return _SearchView(
-                                  queryController: _queryController,
-                                  query: _query,
-                                  onQueryChanged: (value) {
-                                    setState(() {
-                                      _query = value;
-                                    });
+                            return StreamBuilder<List<AcademicNote>>(
+                              stream: _noteRepository.watchNotes(),
+                              builder: (context, noteSnapshot) {
+                                final notes =
+                                    noteSnapshot.data ?? const <AcademicNote>[];
+                                return StreamBuilder<List<SemesterSummary>>(
+                                  stream: _recordRepository.watchSummaries(),
+                                  builder: (context, recordSnapshot) {
+                                    final summaries =
+                                        recordSnapshot.data ??
+                                        const <SemesterSummary>[];
+                                    return _SearchView(
+                                      queryController: _queryController,
+                                      query: _query,
+                                      onQueryChanged: (value) {
+                                        setState(() {
+                                          _query = value;
+                                        });
+                                      },
+                                      subjects: subjects,
+                                      sessions: sessions,
+                                      tasks: tasks,
+                                      studySessions: studySessions,
+                                      expenses: expenses,
+                                      notes: notes,
+                                      summaries: summaries,
+                                    );
                                   },
-                                  subjects: subjects,
-                                  sessions: sessions,
-                                  tasks: tasks,
-                                  studySessions: studySessions,
-                                  expenses: expenses,
-                                  summaries: summaries,
                                 );
                               },
                             );
@@ -144,6 +157,7 @@ class _SearchView extends StatelessWidget {
     required this.tasks,
     required this.studySessions,
     required this.expenses,
+    required this.notes,
     required this.summaries,
   });
 
@@ -155,6 +169,7 @@ class _SearchView extends StatelessWidget {
   final List<AcademicTask> tasks;
   final List<StudySession> studySessions;
   final List<UniversityExpense> expenses;
+  final List<AcademicNote> notes;
   final List<SemesterSummary> summaries;
 
   @override
@@ -303,6 +318,25 @@ class _SearchView extends StatelessWidget {
                 '${expense.category.label} - ${MoneyFormatter.pesos(expense.amountCents)}',
             color: const Color(0xFFDC6B19),
             onTap: () => _open(context, const ExpensesScreen()),
+          ),
+        );
+      }
+    }
+
+    for (final note in notes) {
+      final subject = subjectMap[note.subjectId];
+      final text =
+          '${note.title} ${note.content} ${note.tags.join(' ')} ${subject?.name ?? ''}';
+      if (_matches(text, query)) {
+        results.add(
+          _SearchResult(
+            group: 'Apuntes',
+            icon: Icons.edit_note_outlined,
+            title: note.title,
+            subtitle:
+                '${subject?.name ?? 'Nota global'} - ${AppDateFormatter.date(note.updatedAt)}',
+            color: const Color(0xFF0891B2),
+            onTap: () => _open(context, const NotesScreen()),
           ),
         );
       }

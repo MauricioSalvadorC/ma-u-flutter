@@ -10,6 +10,7 @@ import '../../academic_record/presentation/academic_record_screen.dart';
 import '../../exam_week/presentation/exam_week_screen.dart';
 import '../../expenses/presentation/expenses_screen.dart';
 import '../../grades/presentation/grade_calculator_screen.dart';
+import '../../notes/presentation/notes_screen.dart';
 import '../../schedule/data/academic_seed_service.dart';
 import '../../schedule/data/schedule_repository.dart';
 import '../../schedule/domain/class_session.dart';
@@ -121,6 +122,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const StudyAgendaScreen()),
           );
+        },
+      ),
+      _DashboardModule(
+        icon: Icons.edit_note_outlined,
+        title: 'Apuntes',
+        subtitle: 'Notas por materia, resumenes, ideas y dudas guardadas.',
+        color: const Color(0xFF0891B2),
+        onTap: () {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute<void>(builder: (_) => const NotesScreen()));
         },
       ),
       _DashboardModule(

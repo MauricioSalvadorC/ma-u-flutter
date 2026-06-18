@@ -6,6 +6,8 @@ import '../../../data/database/app_database_provider.dart';
 import '../../academic_record/data/academic_record_repository.dart';
 import '../../expenses/data/expense_repository.dart';
 import '../../expenses/domain/university_expense.dart';
+import '../../notes/data/note_repository.dart';
+import '../../notes/domain/academic_note.dart';
 import '../../schedule/data/academic_seed_service.dart';
 import '../../schedule/data/schedule_repository.dart';
 import '../../schedule/domain/class_session.dart';
@@ -30,6 +32,7 @@ class _TrashScreenState extends State<TrashScreen> {
   late final StudySessionRepository _studyRepository;
   late final ExpenseRepository _expenseRepository;
   late final AcademicRecordRepository _recordRepository;
+  late final NoteRepository _noteRepository;
   late final Future<void> _seedFuture;
   _TrashFilter _filter = _TrashFilter.all;
   String _query = '';
@@ -44,6 +47,7 @@ class _TrashScreenState extends State<TrashScreen> {
     _studyRepository = StudySessionRepository(database);
     _expenseRepository = ExpenseRepository(database);
     _recordRepository = AcademicRecordRepository(database);
+    _noteRepository = NoteRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
@@ -92,43 +96,53 @@ class _TrashScreenState extends State<TrashScreen> {
                                 final deletedExpenses =
                                     deletedExpenseSnapshot.data ??
                                     const <UniversityExpense>[];
-                                return StreamBuilder(
-                                  stream: _recordRepository
-                                      .watchDeletedSemesters(),
-                                  builder: (context, semesterSnapshot) {
-                                    final deletedSemesters =
-                                        semesterSnapshot.data ?? const [];
+                                return StreamBuilder<List<AcademicNote>>(
+                                  stream: _noteRepository.watchDeletedNotes(),
+                                  builder: (context, deletedNoteSnapshot) {
+                                    final deletedNotes =
+                                        deletedNoteSnapshot.data ??
+                                        const <AcademicNote>[];
                                     return StreamBuilder(
                                       stream: _recordRepository
-                                          .watchDeletedCourses(),
-                                      builder: (context, courseSnapshot) {
-                                        final deletedCourses =
-                                            courseSnapshot.data ?? const [];
-                                        final items = _buildItems(
-                                          subjects: subjects,
-                                          tasks: tasks,
-                                          deletedSubjects: deletedSubjects,
-                                          deletedSessions: deletedSessions,
-                                          deletedStudySessions:
-                                              deletedStudySessions,
-                                          deletedExpenses: deletedExpenses,
-                                          deletedSemesters: deletedSemesters,
-                                          deletedCourses: deletedCourses,
-                                        );
+                                          .watchDeletedSemesters(),
+                                      builder: (context, semesterSnapshot) {
+                                        final deletedSemesters =
+                                            semesterSnapshot.data ?? const [];
+                                        return StreamBuilder(
+                                          stream: _recordRepository
+                                              .watchDeletedCourses(),
+                                          builder: (context, courseSnapshot) {
+                                            final deletedCourses =
+                                                courseSnapshot.data ?? const [];
+                                            final items = _buildItems(
+                                              subjects: subjects,
+                                              tasks: tasks,
+                                              deletedSubjects: deletedSubjects,
+                                              deletedSessions: deletedSessions,
+                                              deletedStudySessions:
+                                                  deletedStudySessions,
+                                              deletedExpenses: deletedExpenses,
+                                              deletedNotes: deletedNotes,
+                                              deletedSemesters:
+                                                  deletedSemesters,
+                                              deletedCourses: deletedCourses,
+                                            );
 
-                                        return _TrashView(
-                                          items: items,
-                                          filter: _filter,
-                                          query: _query,
-                                          onFilterChanged: (filter) {
-                                            setState(() {
-                                              _filter = filter;
-                                            });
-                                          },
-                                          onQueryChanged: (query) {
-                                            setState(() {
-                                              _query = query;
-                                            });
+                                            return _TrashView(
+                                              items: items,
+                                              filter: _filter,
+                                              query: _query,
+                                              onFilterChanged: (filter) {
+                                                setState(() {
+                                                  _filter = filter;
+                                                });
+                                              },
+                                              onQueryChanged: (query) {
+                                                setState(() {
+                                                  _query = query;
+                                                });
+                                              },
+                                            );
                                           },
                                         );
                                       },
@@ -158,6 +172,7 @@ class _TrashScreenState extends State<TrashScreen> {
     required List<ClassSession> deletedSessions,
     required List<StudySession> deletedStudySessions,
     required List<UniversityExpense> deletedExpenses,
+    required List<AcademicNote> deletedNotes,
     required List<dynamic> deletedSemesters,
     required List<dynamic> deletedCourses,
   }) {
@@ -259,6 +274,29 @@ class _TrashScreenState extends State<TrashScreen> {
       );
     }
 
+    for (final note in deletedNotes) {
+      final subject = _subjectForOptional(subjects, note.subjectId);
+      items.add(
+        _TrashItemData(
+          type: _TrashFilter.notes,
+          icon: Icons.edit_note_outlined,
+          title: note.title,
+          subtitle: _deletedSubtitle(
+            subject?.name ?? 'Nota global',
+            note.deletedAt,
+          ),
+          searchText:
+              '${note.title} ${note.content} ${note.tags.join(' ')} ${subject?.name ?? ''}',
+          onRestore: () {
+            final id = note.id;
+            return id == null
+                ? Future<void>.value()
+                : _noteRepository.restoreNote(id);
+          },
+        ),
+      );
+    }
+
     for (final semester in deletedSemesters) {
       items.add(
         _TrashItemData(
@@ -312,6 +350,20 @@ class _TrashScreenState extends State<TrashScreen> {
         accentColorValue: 0xFF64748B,
       ),
     );
+  }
+
+  Subject? _subjectForOptional(List<Subject> subjects, String? id) {
+    if (id == null) {
+      return null;
+    }
+
+    for (final subject in subjects) {
+      if (subject.id == id) {
+        return subject;
+      }
+    }
+
+    return null;
   }
 
   String _deletedSubtitle(String base, DateTime? deletedAt) {
@@ -590,6 +642,7 @@ enum _TrashFilter {
   schedule('Horario'),
   tasks('Tareas'),
   study('Estudio'),
+  notes('Apuntes'),
   expenses('Gastos'),
   record('Historial');
 
