@@ -36,14 +36,14 @@ class GradeCalculator {
         weights.thirdTerm;
   }
 
-  double? parseGrade(String value) {
+  double? parseGrade(String value, {double maxGrade = 5}) {
     final normalizedValue = value.trim().replaceAll(',', '.');
     if (normalizedValue.isEmpty) {
       return null;
     }
 
     final grade = double.tryParse(normalizedValue);
-    if (grade == null || grade < 0 || grade > 5) {
+    if (grade == null || grade < 0 || grade > maxGrade) {
       return null;
     }
 

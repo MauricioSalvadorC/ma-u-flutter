@@ -12,14 +12,15 @@ enum ExpenseBudgetPeriod {
 }
 
 enum GradeScale {
-  zeroToFive('0 a 5', 5),
-  zeroToTen('0 a 10', 10),
-  zeroToHundred('0 a 100', 100);
+  zeroToFive('0 a 5', 5, 3),
+  zeroToTen('0 a 10', 10, 6),
+  zeroToHundred('0 a 100', 100, 60);
 
-  const GradeScale(this.label, this.maxValue);
+  const GradeScale(this.label, this.maxValue, this.defaultPassingGrade);
 
   final String label;
   final int maxValue;
+  final double defaultPassingGrade;
 }
 
 class AppSettingsRepository {
@@ -31,6 +32,7 @@ class AppSettingsRepository {
   static const _expenseBudgetCentsKey = 'expense_budget_cents';
   static const _expenseBudgetPeriodKey = 'expense_budget_period';
   static const _gradeScaleKey = 'grade_scale';
+  static const _passingGradeKey = 'passing_grade';
   static const _universityNameKey = 'university_name';
   static const _careerNameKey = 'career_name';
   static const _currentSemesterKey = 'current_semester';
@@ -82,6 +84,11 @@ class AppSettingsRepository {
       'zeroToHundred' => GradeScale.zeroToHundred,
       _ => null,
     };
+  }
+
+  Future<double?> getPassingGrade() async {
+    final value = await _database.settingsDao.getValue(_passingGradeKey);
+    return double.tryParse(value ?? '');
   }
 
   Future<String> getUniversityName() async {
@@ -147,6 +154,13 @@ class AppSettingsRepository {
     return _database.settingsDao.setValue(
       key: _gradeScaleKey,
       value: scale.name,
+    );
+  }
+
+  Future<void> setPassingGrade(double grade) {
+    return _database.settingsDao.setValue(
+      key: _passingGradeKey,
+      value: grade.toString(),
     );
   }
 

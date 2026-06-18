@@ -9,6 +9,9 @@ import '../../academic_record/presentation/academic_record_screen.dart';
 import '../../expenses/data/expense_repository.dart';
 import '../../expenses/domain/university_expense.dart';
 import '../../expenses/presentation/expenses_screen.dart';
+import '../../grades/data/grade_assessment_repository.dart';
+import '../../grades/domain/academic_assessment.dart';
+import '../../grades/presentation/academic_grades_screen.dart';
 import '../../notes/data/note_repository.dart';
 import '../../notes/domain/academic_note.dart';
 import '../../notes/presentation/notes_screen.dart';
@@ -41,6 +44,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   late final ExpenseRepository _expenseRepository;
   late final AcademicRecordRepository _recordRepository;
   late final NoteRepository _noteRepository;
+  late final GradeAssessmentRepository _assessmentRepository;
   late final Future<void> _seedFuture;
   String _query = '';
 
@@ -55,6 +59,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     _expenseRepository = ExpenseRepository(database);
     _recordRepository = AcademicRecordRepository(database);
     _noteRepository = NoteRepository(database);
+    _assessmentRepository = GradeAssessmentRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
@@ -106,27 +111,38 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                               builder: (context, noteSnapshot) {
                                 final notes =
                                     noteSnapshot.data ?? const <AcademicNote>[];
-                                return StreamBuilder<List<SemesterSummary>>(
-                                  stream: _recordRepository.watchSummaries(),
-                                  builder: (context, recordSnapshot) {
-                                    final summaries =
-                                        recordSnapshot.data ??
-                                        const <SemesterSummary>[];
-                                    return _SearchView(
-                                      queryController: _queryController,
-                                      query: _query,
-                                      onQueryChanged: (value) {
-                                        setState(() {
-                                          _query = value;
-                                        });
+                                return StreamBuilder<List<AcademicAssessment>>(
+                                  stream: _assessmentRepository
+                                      .watchAssessments(),
+                                  builder: (context, assessmentSnapshot) {
+                                    final assessments =
+                                        assessmentSnapshot.data ??
+                                        const <AcademicAssessment>[];
+                                    return StreamBuilder<List<SemesterSummary>>(
+                                      stream: _recordRepository
+                                          .watchSummaries(),
+                                      builder: (context, recordSnapshot) {
+                                        final summaries =
+                                            recordSnapshot.data ??
+                                            const <SemesterSummary>[];
+                                        return _SearchView(
+                                          queryController: _queryController,
+                                          query: _query,
+                                          onQueryChanged: (value) {
+                                            setState(() {
+                                              _query = value;
+                                            });
+                                          },
+                                          subjects: subjects,
+                                          sessions: sessions,
+                                          tasks: tasks,
+                                          studySessions: studySessions,
+                                          expenses: expenses,
+                                          notes: notes,
+                                          assessments: assessments,
+                                          summaries: summaries,
+                                        );
                                       },
-                                      subjects: subjects,
-                                      sessions: sessions,
-                                      tasks: tasks,
-                                      studySessions: studySessions,
-                                      expenses: expenses,
-                                      notes: notes,
-                                      summaries: summaries,
                                     );
                                   },
                                 );
@@ -158,6 +174,7 @@ class _SearchView extends StatelessWidget {
     required this.studySessions,
     required this.expenses,
     required this.notes,
+    required this.assessments,
     required this.summaries,
   });
 
@@ -170,6 +187,7 @@ class _SearchView extends StatelessWidget {
   final List<StudySession> studySessions;
   final List<UniversityExpense> expenses;
   final List<AcademicNote> notes;
+  final List<AcademicAssessment> assessments;
   final List<SemesterSummary> summaries;
 
   @override
@@ -337,6 +355,28 @@ class _SearchView extends StatelessWidget {
                 '${subject?.name ?? 'Nota global'} - ${AppDateFormatter.date(note.updatedAt)}',
             color: const Color(0xFF0891B2),
             onTap: () => _open(context, const NotesScreen()),
+          ),
+        );
+      }
+    }
+
+    for (final assessment in assessments) {
+      final subject = subjectMap[assessment.subjectId];
+      final text =
+          '${assessment.title} ${assessment.grade} ${assessment.weightPercent} ${assessment.notes} ${subject?.name ?? ''}';
+      if (_matches(text, query)) {
+        results.add(
+          _SearchResult(
+            group: 'Notas',
+            icon: Icons.grade_outlined,
+            title: assessment.title,
+            subtitle:
+                '${subject?.name ?? 'Materia'} - ${assessment.grade.toStringAsFixed(2)} - ${assessment.weightPercent.toStringAsFixed(0)}%',
+            color: const Color(0xFF4F46E5),
+            onTap: () => _open(
+              context,
+              AcademicGradesScreen(initialSubjectId: assessment.subjectId),
+            ),
           ),
         );
       }

@@ -16,6 +16,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late final AppSettingsRepository _repository;
   GradeScale _gradeScale = GradeScale.zeroToFive;
+  double _passingGrade = GradeScale.zeroToFive.defaultPassingGrade;
   ExpenseBudgetPeriod _budgetPeriod = ExpenseBudgetPeriod.weekly;
   int _budgetCents = 15000000;
   bool? _notificationsEnabled;
@@ -24,6 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _universityController = TextEditingController();
   final _careerController = TextEditingController();
   final _semesterController = TextEditingController();
+  final _passingGradeController = TextEditingController();
 
   @override
   void initState() {
@@ -38,11 +40,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _universityController.dispose();
     _careerController.dispose();
     _semesterController.dispose();
+    _passingGradeController.dispose();
     super.dispose();
   }
 
   Future<void> _loadAdvancedSettings() async {
     final gradeScale = await _repository.getGradeScale();
+    final passingGrade = await _repository.getPassingGrade();
     final budget = await _repository.getExpenseBudgetCents();
     final budgetPeriod = await _repository.getExpenseBudgetPeriod();
     final university = await _repository.getUniversityName();
@@ -56,7 +60,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     setState(() {
+      final resolvedScale = gradeScale ?? _gradeScale;
+      final resolvedPassingGrade =
+          passingGrade ?? resolvedScale.defaultPassingGrade;
       _gradeScale = gradeScale ?? _gradeScale;
+      _passingGrade = resolvedPassingGrade;
+      _passingGradeController.text = _formatGrade(resolvedPassingGrade);
       _budgetCents = budget ?? _budgetCents;
       _budgetPeriod = budgetPeriod ?? _budgetPeriod;
       _universityController.text = university;
@@ -68,10 +77,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _setGradeScale(GradeScale scale) async {
+    final nextPassingGrade = _passingGrade > scale.maxValue
+        ? scale.defaultPassingGrade
+        : _passingGrade;
     setState(() {
       _gradeScale = scale;
+      _passingGrade = nextPassingGrade;
+      _passingGradeController.text = _formatGrade(nextPassingGrade);
     });
     await _repository.setGradeScale(scale);
+    await _repository.setPassingGrade(nextPassingGrade);
+  }
+
+  Future<void> _savePassingGrade() async {
+    final value = double.tryParse(
+      _passingGradeController.text.trim().replaceAll(',', '.'),
+    );
+    if (value == null || value < 0 || value > _gradeScale.maxValue) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Ingresa una nota entre 0 y ${_formatGrade(_gradeScale.maxValue.toDouble())}.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    await _repository.setPassingGrade(value);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _passingGrade = value;
+      _passingGradeController.text = _formatGrade(value);
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Meta academica guardada.')));
   }
 
   Future<void> _openBudgetDialog() async {
@@ -234,6 +277,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 12),
             _GradeScalePanel(selected: _gradeScale, onSelected: _setGradeScale),
             const SizedBox(height: 12),
+            _PassingGradePanel(
+              scale: _gradeScale,
+              controller: _passingGradeController,
+              onSave: _savePassingGrade,
+            ),
+            const SizedBox(height: 12),
             _AcademicProfilePanel(
               universityController: _universityController,
               careerController: _careerController,
@@ -247,6 +296,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+}
+
+String _formatGrade(double value) {
+  if (value == value.roundToDouble()) {
+    return value.toStringAsFixed(0);
+  }
+
+  return value.toStringAsFixed(2);
 }
 
 class _ColorPreview extends StatelessWidget {
@@ -560,6 +617,50 @@ class _GradeScalePanel extends StatelessWidget {
         ],
         selected: {selected},
         onSelectionChanged: (selection) => onSelected(selection.first),
+      ),
+    );
+  }
+}
+
+class _PassingGradePanel extends StatelessWidget {
+  const _PassingGradePanel({
+    required this.scale,
+    required this.controller,
+    required this.onSave,
+  });
+
+  final GradeScale scale;
+  final TextEditingController controller;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingsCard(
+      title: 'Meta para pasar',
+      subtitle: 'Se usa para calcular cuanto necesitas en cada materia.',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: 'Nota minima',
+                helperText: 'Escala ${scale.label}',
+                prefixIcon: const Icon(Icons.flag_outlined),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton.icon(
+            onPressed: onSave,
+            icon: const Icon(Icons.save_outlined),
+            label: const Text('Guardar'),
+          ),
+        ],
       ),
     );
   }

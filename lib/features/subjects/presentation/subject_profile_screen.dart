@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/formatters/app_date_formatter.dart';
+import '../../../core/settings/app_settings_repository.dart';
 import '../../../data/database/app_database_provider.dart';
-import '../../grades/presentation/grade_calculator_screen.dart';
+import '../../grades/data/grade_assessment_repository.dart';
+import '../../grades/domain/academic_assessment.dart';
+import '../../grades/presentation/academic_grades_screen.dart';
 import '../../notes/data/note_repository.dart';
 import '../../notes/domain/academic_note.dart';
 import '../../notes/presentation/notes_screen.dart';
@@ -34,7 +37,11 @@ class _SubjectProfileScreenState extends State<SubjectProfileScreen> {
   late final TaskRepository _taskRepository;
   late final StudySessionRepository _studyRepository;
   late final NoteRepository _noteRepository;
+  late final GradeAssessmentRepository _assessmentRepository;
+  late final AppSettingsRepository _settingsRepository;
   late final Future<void> _seedFuture;
+  GradeScale _scale = GradeScale.zeroToFive;
+  double _passingGrade = GradeScale.zeroToFive.defaultPassingGrade;
 
   @override
   void initState() {
@@ -45,10 +52,26 @@ class _SubjectProfileScreenState extends State<SubjectProfileScreen> {
     _taskRepository = TaskRepository(database);
     _studyRepository = StudySessionRepository(database);
     _noteRepository = NoteRepository(database);
+    _assessmentRepository = GradeAssessmentRepository(database);
+    _settingsRepository = AppSettingsRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
     ).seedIfNeeded();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final scale = await _settingsRepository.getGradeScale();
+    final resolvedScale = scale ?? _scale;
+    final passingGrade = await _settingsRepository.getPassingGrade();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _scale = resolvedScale;
+      _passingGrade = passingGrade ?? resolvedScale.defaultPassingGrade;
+    });
   }
 
   @override
@@ -93,12 +116,29 @@ class _SubjectProfileScreenState extends State<SubjectProfileScreen> {
                                   (note) => note.subjectId == widget.subject.id,
                                 )
                                 .toList();
-                        return _SubjectProfileView(
-                          subject: widget.subject,
-                          sessions: sessions,
-                          tasks: tasks,
-                          studySessions: studySessions,
-                          notes: notes,
+                        return StreamBuilder<List<AcademicAssessment>>(
+                          stream: _assessmentRepository.watchAssessments(),
+                          builder: (context, assessmentSnapshot) {
+                            final assessments =
+                                (assessmentSnapshot.data ??
+                                        const <AcademicAssessment>[])
+                                    .where(
+                                      (assessment) =>
+                                          assessment.subjectId ==
+                                          widget.subject.id,
+                                    )
+                                    .toList();
+                            return _SubjectProfileView(
+                              subject: widget.subject,
+                              sessions: sessions,
+                              tasks: tasks,
+                              studySessions: studySessions,
+                              notes: notes,
+                              assessments: assessments,
+                              scale: _scale,
+                              passingGrade: _passingGrade,
+                            );
+                          },
                         );
                       },
                     );
@@ -120,6 +160,9 @@ class _SubjectProfileView extends StatelessWidget {
     required this.tasks,
     required this.studySessions,
     required this.notes,
+    required this.assessments,
+    required this.scale,
+    required this.passingGrade,
   });
 
   final Subject subject;
@@ -127,6 +170,9 @@ class _SubjectProfileView extends StatelessWidget {
   final List<AcademicTask> tasks;
   final List<StudySession> studySessions;
   final List<AcademicNote> notes;
+  final List<AcademicAssessment> assessments;
+  final GradeScale scale;
+  final double passingGrade;
 
   @override
   Widget build(BuildContext context) {
@@ -145,6 +191,11 @@ class _SubjectProfileView extends StatelessWidget {
     final nextClass = _nextClass(sessions);
     final nextTask = _nextTask(pendingTasks);
     final nextStudy = _nextStudy(pendingStudy);
+    final gradeProgress = GradeProgress(
+      assessments: assessments,
+      scale: scale,
+      passingGrade: passingGrade,
+    );
     final accent = Color(subject.accentColorValue);
 
     return Scaffold(
@@ -173,9 +224,11 @@ class _SubjectProfileView extends StatelessWidget {
                   label: 'Estudio',
                 ),
                 _MetricItem(
-                  icon: Icons.edit_note_outlined,
-                  value: notes.length.toString(),
-                  label: 'Apuntes',
+                  icon: Icons.grade_outlined,
+                  value: gradeProgress.registeredAverage == null
+                      ? '--'
+                      : _formatGrade(gradeProgress.registeredAverage!, scale),
+                  label: 'Promedio',
                 ),
               ],
             ),
@@ -256,7 +309,11 @@ class _SubjectProfileView extends StatelessWidget {
               ],
             ),
             _GradesPreviewCard(
-              onOpen: () => _open(context, const GradeCalculatorScreen()),
+              progress: gradeProgress,
+              onOpen: () => _open(
+                context,
+                AcademicGradesScreen(initialSubjectId: subject.id),
+              ),
             ),
           ],
         ),
@@ -565,8 +622,9 @@ class _InfoTile extends StatelessWidget {
 }
 
 class _GradesPreviewCard extends StatelessWidget {
-  const _GradesPreviewCard({required this.onOpen});
+  const _GradesPreviewCard({required this.progress, required this.onOpen});
 
+  final GradeProgress progress;
   final VoidCallback onOpen;
 
   @override
@@ -585,12 +643,12 @@ class _GradesPreviewCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Calificaciones',
+                    'Notas',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Por ahora abre la calculadora. El sistema por materia sera la siguiente evolucion.',
+                    _gradeMessage(progress),
                     style: TextStyle(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
@@ -605,6 +663,15 @@ class _GradesPreviewCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _gradeMessage(GradeProgress progress) {
+    final average = progress.registeredAverage;
+    if (average == null) {
+      return 'Sin evaluaciones. Agrega notas con porcentaje para ver el avance.';
+    }
+
+    return '${_formatPercent(progress.evaluatedPercent)}% evaluado - promedio ${_formatGrade(average, progress.scale)}.';
   }
 }
 
@@ -783,4 +850,21 @@ List<StudySession> _sortedStudy(List<StudySession> sessions) {
 
 List<AcademicNote> _sortedNotes(List<AcademicNote> notes) {
   return [...notes]..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+}
+
+String _formatGrade(double value, GradeScale scale) {
+  final decimals = scale == GradeScale.zeroToHundred ? 1 : 2;
+  if (value == value.roundToDouble()) {
+    return value.toStringAsFixed(0);
+  }
+
+  return value.toStringAsFixed(decimals);
+}
+
+String _formatPercent(double value) {
+  if (value == value.roundToDouble()) {
+    return value.toStringAsFixed(0);
+  }
+
+  return value.toStringAsFixed(1);
 }

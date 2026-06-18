@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/settings/app_settings_repository.dart';
+import '../../../data/database/app_database_provider.dart';
 import '../domain/grade_calculator.dart';
 
 class GradeCalculatorScreen extends StatefulWidget {
@@ -11,13 +13,24 @@ class GradeCalculatorScreen extends StatefulWidget {
 
 class _GradeCalculatorScreenState extends State<GradeCalculatorScreen> {
   final _calculator = const GradeCalculator();
+  late final AppSettingsRepository _settingsRepository;
   final _firstTermController = TextEditingController();
   final _secondTermController = TextEditingController();
-  final _desiredGradeController = TextEditingController(text: '3.0');
+  final _desiredGradeController = TextEditingController();
   final _thirdTermController = TextEditingController();
+  GradeScale _scale = GradeScale.zeroToFive;
+  double _passingGrade = GradeScale.zeroToFive.defaultPassingGrade;
 
   String? _requiredGradeResult;
   String? _finalGradeResult;
+
+  @override
+  void initState() {
+    super.initState();
+    _settingsRepository = AppSettingsRepository(AppDatabaseProvider.instance);
+    _desiredGradeController.text = _formatGrade(_passingGrade);
+    _loadSettings();
+  }
 
   @override
   void dispose() {
@@ -29,13 +42,23 @@ class _GradeCalculatorScreenState extends State<GradeCalculatorScreen> {
   }
 
   void _calculateRequiredGrade() {
-    final firstTerm = _calculator.parseGrade(_firstTermController.text);
-    final secondTerm = _calculator.parseGrade(_secondTermController.text);
-    final desiredGrade = _calculator.parseGrade(_desiredGradeController.text);
+    final firstTerm = _calculator.parseGrade(
+      _firstTermController.text,
+      maxGrade: _scale.maxValue.toDouble(),
+    );
+    final secondTerm = _calculator.parseGrade(
+      _secondTermController.text,
+      maxGrade: _scale.maxValue.toDouble(),
+    );
+    final desiredGrade = _calculator.parseGrade(
+      _desiredGradeController.text,
+      maxGrade: _scale.maxValue.toDouble(),
+    );
 
     if (firstTerm == null || secondTerm == null || desiredGrade == null) {
       setState(() {
-        _requiredGradeResult = 'Ingresa notas validas entre 0.0 y 5.0.';
+        _requiredGradeResult =
+            'Ingresa notas validas entre 0 y ${_formatGrade(_scale.maxValue.toDouble())}.';
       });
       return;
     }
@@ -47,27 +70,37 @@ class _GradeCalculatorScreenState extends State<GradeCalculatorScreen> {
     );
 
     setState(() {
-      if (requiredGrade > 5) {
+      if (requiredGrade > _scale.maxValue) {
         _requiredGradeResult =
-            'Necesitarias ${requiredGrade.toStringAsFixed(2)}. Con estos cortes, la meta supera 5.0.';
+            'Necesitarias ${_formatGrade(requiredGrade)}. Con estos cortes, la meta supera ${_formatGrade(_scale.maxValue.toDouble())}.';
       } else if (requiredGrade <= 0) {
         _requiredGradeResult =
             'Ya alcanzaste la meta. Solo necesitas mantenerte.';
       } else {
         _requiredGradeResult =
-            'Necesitas ${requiredGrade.toStringAsFixed(2)} en el tercer corte.';
+            'Necesitas ${_formatGrade(requiredGrade)} en el tercer corte.';
       }
     });
   }
 
   void _calculateFinalGrade() {
-    final firstTerm = _calculator.parseGrade(_firstTermController.text);
-    final secondTerm = _calculator.parseGrade(_secondTermController.text);
-    final thirdTerm = _calculator.parseGrade(_thirdTermController.text);
+    final firstTerm = _calculator.parseGrade(
+      _firstTermController.text,
+      maxGrade: _scale.maxValue.toDouble(),
+    );
+    final secondTerm = _calculator.parseGrade(
+      _secondTermController.text,
+      maxGrade: _scale.maxValue.toDouble(),
+    );
+    final thirdTerm = _calculator.parseGrade(
+      _thirdTermController.text,
+      maxGrade: _scale.maxValue.toDouble(),
+    );
 
     if (firstTerm == null || secondTerm == null || thirdTerm == null) {
       setState(() {
-        _finalGradeResult = 'Ingresa notas validas entre 0.0 y 5.0.';
+        _finalGradeResult =
+            'Ingresa notas validas entre 0 y ${_formatGrade(_scale.maxValue.toDouble())}.';
       });
       return;
     }
@@ -79,21 +112,43 @@ class _GradeCalculatorScreenState extends State<GradeCalculatorScreen> {
     );
 
     setState(() {
-      _finalGradeResult =
-          'Tu nota final seria ${finalGrade.toStringAsFixed(2)}.';
+      _finalGradeResult = 'Tu nota final seria ${_formatGrade(finalGrade)}.';
     });
   }
 
   void _clearForm() {
     _firstTermController.clear();
     _secondTermController.clear();
-    _desiredGradeController.text = '3.0';
+    _desiredGradeController.text = _formatGrade(_passingGrade);
     _thirdTermController.clear();
 
     setState(() {
       _requiredGradeResult = null;
       _finalGradeResult = null;
     });
+  }
+
+  Future<void> _loadSettings() async {
+    final scale = await _settingsRepository.getGradeScale();
+    final resolvedScale = scale ?? _scale;
+    final passingGrade = await _settingsRepository.getPassingGrade();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _scale = resolvedScale;
+      _passingGrade = passingGrade ?? resolvedScale.defaultPassingGrade;
+      _desiredGradeController.text = _formatGrade(_passingGrade);
+    });
+  }
+
+  String _formatGrade(double value) {
+    final decimals = _scale == GradeScale.zeroToHundred ? 1 : 2;
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+
+    return value.toStringAsFixed(decimals);
   }
 
   @override
@@ -162,7 +217,7 @@ class _CalculatorIntro extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'Usa punto o coma decimal. Por ahora validamos notas entre 0.0 y 5.0.',
+          'Usa punto o coma decimal. La escala se toma desde Configuracion.',
           style: textTheme.bodyMedium,
         ),
       ],

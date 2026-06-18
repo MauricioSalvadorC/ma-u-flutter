@@ -9,7 +9,7 @@ import '../../academic_goals/presentation/academic_goals_screen.dart';
 import '../../academic_record/presentation/academic_record_screen.dart';
 import '../../exam_week/presentation/exam_week_screen.dart';
 import '../../expenses/presentation/expenses_screen.dart';
-import '../../grades/presentation/grade_calculator_screen.dart';
+import '../../grades/presentation/academic_grades_screen.dart';
 import '../../notes/presentation/notes_screen.dart';
 import '../../schedule/data/academic_seed_service.dart';
 import '../../schedule/data/schedule_repository.dart';
@@ -69,7 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => const GradeCalculatorScreen(),
+              builder: (_) => const AcademicGradesScreen(),
             ),
           );
         },

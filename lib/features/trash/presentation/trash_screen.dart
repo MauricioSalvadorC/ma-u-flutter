@@ -6,6 +6,8 @@ import '../../../data/database/app_database_provider.dart';
 import '../../academic_record/data/academic_record_repository.dart';
 import '../../expenses/data/expense_repository.dart';
 import '../../expenses/domain/university_expense.dart';
+import '../../grades/data/grade_assessment_repository.dart';
+import '../../grades/domain/academic_assessment.dart';
 import '../../notes/data/note_repository.dart';
 import '../../notes/domain/academic_note.dart';
 import '../../schedule/data/academic_seed_service.dart';
@@ -33,6 +35,7 @@ class _TrashScreenState extends State<TrashScreen> {
   late final ExpenseRepository _expenseRepository;
   late final AcademicRecordRepository _recordRepository;
   late final NoteRepository _noteRepository;
+  late final GradeAssessmentRepository _assessmentRepository;
   late final Future<void> _seedFuture;
   _TrashFilter _filter = _TrashFilter.all;
   String _query = '';
@@ -48,6 +51,7 @@ class _TrashScreenState extends State<TrashScreen> {
     _expenseRepository = ExpenseRepository(database);
     _recordRepository = AcademicRecordRepository(database);
     _noteRepository = NoteRepository(database);
+    _assessmentRepository = GradeAssessmentRepository(database);
     _seedFuture = AcademicSeedService(
       subjectRepository: _subjectRepository,
       scheduleRepository: _scheduleRepository,
@@ -102,46 +106,68 @@ class _TrashScreenState extends State<TrashScreen> {
                                     final deletedNotes =
                                         deletedNoteSnapshot.data ??
                                         const <AcademicNote>[];
-                                    return StreamBuilder(
-                                      stream: _recordRepository
-                                          .watchDeletedSemesters(),
-                                      builder: (context, semesterSnapshot) {
-                                        final deletedSemesters =
-                                            semesterSnapshot.data ?? const [];
+                                    return StreamBuilder<
+                                      List<AcademicAssessment>
+                                    >(
+                                      stream: _assessmentRepository
+                                          .watchDeletedAssessments(),
+                                      builder: (context, assessmentSnapshot) {
+                                        final deletedAssessments =
+                                            assessmentSnapshot.data ??
+                                            const <AcademicAssessment>[];
                                         return StreamBuilder(
                                           stream: _recordRepository
-                                              .watchDeletedCourses(),
-                                          builder: (context, courseSnapshot) {
-                                            final deletedCourses =
-                                                courseSnapshot.data ?? const [];
-                                            final items = _buildItems(
-                                              subjects: subjects,
-                                              tasks: tasks,
-                                              deletedSubjects: deletedSubjects,
-                                              deletedSessions: deletedSessions,
-                                              deletedStudySessions:
-                                                  deletedStudySessions,
-                                              deletedExpenses: deletedExpenses,
-                                              deletedNotes: deletedNotes,
-                                              deletedSemesters:
-                                                  deletedSemesters,
-                                              deletedCourses: deletedCourses,
-                                            );
+                                              .watchDeletedSemesters(),
+                                          builder: (context, semesterSnapshot) {
+                                            final deletedSemesters =
+                                                semesterSnapshot.data ??
+                                                const [];
+                                            return StreamBuilder(
+                                              stream: _recordRepository
+                                                  .watchDeletedCourses(),
+                                              builder:
+                                                  (context, courseSnapshot) {
+                                                    final deletedCourses =
+                                                        courseSnapshot.data ??
+                                                        const [];
+                                                    final items = _buildItems(
+                                                      subjects: subjects,
+                                                      tasks: tasks,
+                                                      deletedSubjects:
+                                                          deletedSubjects,
+                                                      deletedSessions:
+                                                          deletedSessions,
+                                                      deletedStudySessions:
+                                                          deletedStudySessions,
+                                                      deletedExpenses:
+                                                          deletedExpenses,
+                                                      deletedNotes:
+                                                          deletedNotes,
+                                                      deletedAssessments:
+                                                          deletedAssessments,
+                                                      deletedSemesters:
+                                                          deletedSemesters,
+                                                      deletedCourses:
+                                                          deletedCourses,
+                                                    );
 
-                                            return _TrashView(
-                                              items: items,
-                                              filter: _filter,
-                                              query: _query,
-                                              onFilterChanged: (filter) {
-                                                setState(() {
-                                                  _filter = filter;
-                                                });
-                                              },
-                                              onQueryChanged: (query) {
-                                                setState(() {
-                                                  _query = query;
-                                                });
-                                              },
+                                                    return _TrashView(
+                                                      items: items,
+                                                      filter: _filter,
+                                                      query: _query,
+                                                      onFilterChanged:
+                                                          (filter) {
+                                                            setState(() {
+                                                              _filter = filter;
+                                                            });
+                                                          },
+                                                      onQueryChanged: (query) {
+                                                        setState(() {
+                                                          _query = query;
+                                                        });
+                                                      },
+                                                    );
+                                                  },
                                             );
                                           },
                                         );
@@ -173,6 +199,7 @@ class _TrashScreenState extends State<TrashScreen> {
     required List<StudySession> deletedStudySessions,
     required List<UniversityExpense> deletedExpenses,
     required List<AcademicNote> deletedNotes,
+    required List<AcademicAssessment> deletedAssessments,
     required List<dynamic> deletedSemesters,
     required List<dynamic> deletedCourses,
   }) {
@@ -292,6 +319,26 @@ class _TrashScreenState extends State<TrashScreen> {
             return id == null
                 ? Future<void>.value()
                 : _noteRepository.restoreNote(id);
+          },
+        ),
+      );
+    }
+
+    for (final assessment in deletedAssessments) {
+      final subject = _subjectFor(subjects, assessment.subjectId);
+      items.add(
+        _TrashItemData(
+          type: _TrashFilter.grades,
+          icon: Icons.grade_outlined,
+          title: assessment.title,
+          subtitle: _deletedSubtitle(subject.name, assessment.deletedAt),
+          searchText:
+              '${assessment.title} ${assessment.grade} ${assessment.weightPercent} ${subject.name}',
+          onRestore: () {
+            final id = assessment.id;
+            return id == null
+                ? Future<void>.value()
+                : _assessmentRepository.restoreAssessment(id);
           },
         ),
       );
@@ -643,6 +690,7 @@ enum _TrashFilter {
   tasks('Tareas'),
   study('Estudio'),
   notes('Apuntes'),
+  grades('Notas'),
   expenses('Gastos'),
   record('Historial');
 

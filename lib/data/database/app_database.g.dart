@@ -4893,6 +4893,602 @@ class AcademicNotesCompanion extends UpdateCompanion<NoteRow> {
   }
 }
 
+class $AcademicAssessmentsTable extends AcademicAssessments
+    with TableInfo<$AcademicAssessmentsTable, GradeAssessmentRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AcademicAssessmentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _subjectIdMeta = const VerificationMeta(
+    'subjectId',
+  );
+  @override
+  late final GeneratedColumn<String> subjectId = GeneratedColumn<String>(
+    'subject_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES subjects (id)',
+    ),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _gradeMeta = const VerificationMeta('grade');
+  @override
+  late final GeneratedColumn<double> grade = GeneratedColumn<double>(
+    'grade',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _weightPercentMeta = const VerificationMeta(
+    'weightPercent',
+  );
+  @override
+  late final GeneratedColumn<double> weightPercent = GeneratedColumn<double>(
+    'weight_percent',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+    'date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    subjectId,
+    title,
+    grade,
+    weightPercent,
+    date,
+    notes,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'academic_assessments';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GradeAssessmentRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('subject_id')) {
+      context.handle(
+        _subjectIdMeta,
+        subjectId.isAcceptableOrUnknown(data['subject_id']!, _subjectIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('grade')) {
+      context.handle(
+        _gradeMeta,
+        grade.isAcceptableOrUnknown(data['grade']!, _gradeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_gradeMeta);
+    }
+    if (data.containsKey('weight_percent')) {
+      context.handle(
+        _weightPercentMeta,
+        weightPercent.isAcceptableOrUnknown(
+          data['weight_percent']!,
+          _weightPercentMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_weightPercentMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GradeAssessmentRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GradeAssessmentRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      subjectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      grade: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}grade'],
+      )!,
+      weightPercent: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}weight_percent'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $AcademicAssessmentsTable createAlias(String alias) {
+    return $AcademicAssessmentsTable(attachedDatabase, alias);
+  }
+}
+
+class GradeAssessmentRow extends DataClass
+    implements Insertable<GradeAssessmentRow> {
+  final int id;
+  final String subjectId;
+  final String title;
+  final double grade;
+  final double weightPercent;
+  final DateTime? date;
+  final String? notes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  const GradeAssessmentRow({
+    required this.id,
+    required this.subjectId,
+    required this.title,
+    required this.grade,
+    required this.weightPercent,
+    this.date,
+    this.notes,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['subject_id'] = Variable<String>(subjectId);
+    map['title'] = Variable<String>(title);
+    map['grade'] = Variable<double>(grade);
+    map['weight_percent'] = Variable<double>(weightPercent);
+    if (!nullToAbsent || date != null) {
+      map['date'] = Variable<DateTime>(date);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  AcademicAssessmentsCompanion toCompanion(bool nullToAbsent) {
+    return AcademicAssessmentsCompanion(
+      id: Value(id),
+      subjectId: Value(subjectId),
+      title: Value(title),
+      grade: Value(grade),
+      weightPercent: Value(weightPercent),
+      date: date == null && nullToAbsent ? const Value.absent() : Value(date),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory GradeAssessmentRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GradeAssessmentRow(
+      id: serializer.fromJson<int>(json['id']),
+      subjectId: serializer.fromJson<String>(json['subjectId']),
+      title: serializer.fromJson<String>(json['title']),
+      grade: serializer.fromJson<double>(json['grade']),
+      weightPercent: serializer.fromJson<double>(json['weightPercent']),
+      date: serializer.fromJson<DateTime?>(json['date']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'subjectId': serializer.toJson<String>(subjectId),
+      'title': serializer.toJson<String>(title),
+      'grade': serializer.toJson<double>(grade),
+      'weightPercent': serializer.toJson<double>(weightPercent),
+      'date': serializer.toJson<DateTime?>(date),
+      'notes': serializer.toJson<String?>(notes),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  GradeAssessmentRow copyWith({
+    int? id,
+    String? subjectId,
+    String? title,
+    double? grade,
+    double? weightPercent,
+    Value<DateTime?> date = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => GradeAssessmentRow(
+    id: id ?? this.id,
+    subjectId: subjectId ?? this.subjectId,
+    title: title ?? this.title,
+    grade: grade ?? this.grade,
+    weightPercent: weightPercent ?? this.weightPercent,
+    date: date.present ? date.value : this.date,
+    notes: notes.present ? notes.value : this.notes,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  GradeAssessmentRow copyWithCompanion(AcademicAssessmentsCompanion data) {
+    return GradeAssessmentRow(
+      id: data.id.present ? data.id.value : this.id,
+      subjectId: data.subjectId.present ? data.subjectId.value : this.subjectId,
+      title: data.title.present ? data.title.value : this.title,
+      grade: data.grade.present ? data.grade.value : this.grade,
+      weightPercent: data.weightPercent.present
+          ? data.weightPercent.value
+          : this.weightPercent,
+      date: data.date.present ? data.date.value : this.date,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GradeAssessmentRow(')
+          ..write('id: $id, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('title: $title, ')
+          ..write('grade: $grade, ')
+          ..write('weightPercent: $weightPercent, ')
+          ..write('date: $date, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    subjectId,
+    title,
+    grade,
+    weightPercent,
+    date,
+    notes,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GradeAssessmentRow &&
+          other.id == this.id &&
+          other.subjectId == this.subjectId &&
+          other.title == this.title &&
+          other.grade == this.grade &&
+          other.weightPercent == this.weightPercent &&
+          other.date == this.date &&
+          other.notes == this.notes &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class AcademicAssessmentsCompanion extends UpdateCompanion<GradeAssessmentRow> {
+  final Value<int> id;
+  final Value<String> subjectId;
+  final Value<String> title;
+  final Value<double> grade;
+  final Value<double> weightPercent;
+  final Value<DateTime?> date;
+  final Value<String?> notes;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  const AcademicAssessmentsCompanion({
+    this.id = const Value.absent(),
+    this.subjectId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.grade = const Value.absent(),
+    this.weightPercent = const Value.absent(),
+    this.date = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+  });
+  AcademicAssessmentsCompanion.insert({
+    this.id = const Value.absent(),
+    required String subjectId,
+    required String title,
+    required double grade,
+    required double weightPercent,
+    this.date = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+  }) : subjectId = Value(subjectId),
+       title = Value(title),
+       grade = Value(grade),
+       weightPercent = Value(weightPercent);
+  static Insertable<GradeAssessmentRow> custom({
+    Expression<int>? id,
+    Expression<String>? subjectId,
+    Expression<String>? title,
+    Expression<double>? grade,
+    Expression<double>? weightPercent,
+    Expression<DateTime>? date,
+    Expression<String>? notes,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (subjectId != null) 'subject_id': subjectId,
+      if (title != null) 'title': title,
+      if (grade != null) 'grade': grade,
+      if (weightPercent != null) 'weight_percent': weightPercent,
+      if (date != null) 'date': date,
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+    });
+  }
+
+  AcademicAssessmentsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? subjectId,
+    Value<String>? title,
+    Value<double>? grade,
+    Value<double>? weightPercent,
+    Value<DateTime?>? date,
+    Value<String?>? notes,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+  }) {
+    return AcademicAssessmentsCompanion(
+      id: id ?? this.id,
+      subjectId: subjectId ?? this.subjectId,
+      title: title ?? this.title,
+      grade: grade ?? this.grade,
+      weightPercent: weightPercent ?? this.weightPercent,
+      date: date ?? this.date,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (subjectId.present) {
+      map['subject_id'] = Variable<String>(subjectId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (grade.present) {
+      map['grade'] = Variable<double>(grade.value);
+    }
+    if (weightPercent.present) {
+      map['weight_percent'] = Variable<double>(weightPercent.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AcademicAssessmentsCompanion(')
+          ..write('id: $id, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('title: $title, ')
+          ..write('grade: $grade, ')
+          ..write('weightPercent: $weightPercent, ')
+          ..write('date: $date, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4911,6 +5507,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AcademicGoalsTable academicGoals = $AcademicGoalsTable(this);
   late final $ExpensesTable expenses = $ExpensesTable(this);
   late final $AcademicNotesTable academicNotes = $AcademicNotesTable(this);
+  late final $AcademicAssessmentsTable academicAssessments =
+      $AcademicAssessmentsTable(this);
   late final SubjectsDao subjectsDao = SubjectsDao(this as AppDatabase);
   late final ScheduleDao scheduleDao = ScheduleDao(this as AppDatabase);
   late final TasksDao tasksDao = TasksDao(this as AppDatabase);
@@ -4924,6 +5522,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final ExpensesDao expensesDao = ExpensesDao(this as AppDatabase);
   late final NotesDao notesDao = NotesDao(this as AppDatabase);
+  late final GradeAssessmentsDao gradeAssessmentsDao = GradeAssessmentsDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4939,6 +5540,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     academicGoals,
     expenses,
     academicNotes,
+    academicAssessments,
   ];
 }
 
@@ -5043,6 +5645,33 @@ final class $$SubjectsTableReferences
     ).filter((f) => f.subjectId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_academicNotesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $AcademicAssessmentsTable,
+    List<GradeAssessmentRow>
+  >
+  _academicAssessmentsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.academicAssessments,
+        aliasName: $_aliasNameGenerator(
+          db.subjects.id,
+          db.academicAssessments.subjectId,
+        ),
+      );
+
+  $$AcademicAssessmentsTableProcessedTableManager get academicAssessmentsRefs {
+    final manager = $$AcademicAssessmentsTableTableManager(
+      $_db,
+      $_db.academicAssessments,
+    ).filter((f) => f.subjectId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _academicAssessmentsRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -5189,6 +5818,31 @@ class $$SubjectsTableFilterComposer
           }) => $$AcademicNotesTableFilterComposer(
             $db: $db,
             $table: $db.academicNotes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> academicAssessmentsRefs(
+    Expression<bool> Function($$AcademicAssessmentsTableFilterComposer f) f,
+  ) {
+    final $$AcademicAssessmentsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.academicAssessments,
+      getReferencedColumn: (t) => t.subjectId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AcademicAssessmentsTableFilterComposer(
+            $db: $db,
+            $table: $db.academicAssessments,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5383,6 +6037,32 @@ class $$SubjectsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> academicAssessmentsRefs<T extends Object>(
+    Expression<T> Function($$AcademicAssessmentsTableAnnotationComposer a) f,
+  ) {
+    final $$AcademicAssessmentsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.academicAssessments,
+          getReferencedColumn: (t) => t.subjectId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AcademicAssessmentsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.academicAssessments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$SubjectsTableTableManager
@@ -5403,6 +6083,7 @@ class $$SubjectsTableTableManager
             bool academicTasksRefs,
             bool studySessionsRefs,
             bool academicNotesRefs,
+            bool academicAssessmentsRefs,
           })
         > {
   $$SubjectsTableTableManager(_$AppDatabase db, $SubjectsTable table)
@@ -5474,6 +6155,7 @@ class $$SubjectsTableTableManager
                 academicTasksRefs = false,
                 studySessionsRefs = false,
                 academicNotesRefs = false,
+                academicAssessmentsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -5482,6 +6164,7 @@ class $$SubjectsTableTableManager
                     if (academicTasksRefs) db.academicTasks,
                     if (studySessionsRefs) db.studySessions,
                     if (academicNotesRefs) db.academicNotes,
+                    if (academicAssessmentsRefs) db.academicAssessments,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -5570,6 +6253,27 @@ class $$SubjectsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (academicAssessmentsRefs)
+                        await $_getPrefetchedData<
+                          SubjectRow,
+                          $SubjectsTable,
+                          GradeAssessmentRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SubjectsTableReferences
+                              ._academicAssessmentsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SubjectsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).academicAssessmentsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.subjectId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -5595,6 +6299,7 @@ typedef $$SubjectsTableProcessedTableManager =
         bool academicTasksRefs,
         bool studySessionsRefs,
         bool academicNotesRefs,
+        bool academicAssessmentsRefs,
       })
     >;
 typedef $$ScheduleEntriesTableCreateCompanionBuilder =
@@ -8560,6 +9265,435 @@ typedef $$AcademicNotesTableProcessedTableManager =
       NoteRow,
       PrefetchHooks Function({bool subjectId})
     >;
+typedef $$AcademicAssessmentsTableCreateCompanionBuilder =
+    AcademicAssessmentsCompanion Function({
+      Value<int> id,
+      required String subjectId,
+      required String title,
+      required double grade,
+      required double weightPercent,
+      Value<DateTime?> date,
+      Value<String?> notes,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+    });
+typedef $$AcademicAssessmentsTableUpdateCompanionBuilder =
+    AcademicAssessmentsCompanion Function({
+      Value<int> id,
+      Value<String> subjectId,
+      Value<String> title,
+      Value<double> grade,
+      Value<double> weightPercent,
+      Value<DateTime?> date,
+      Value<String?> notes,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+    });
+
+final class $$AcademicAssessmentsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $AcademicAssessmentsTable,
+          GradeAssessmentRow
+        > {
+  $$AcademicAssessmentsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $SubjectsTable _subjectIdTable(_$AppDatabase db) =>
+      db.subjects.createAlias(
+        $_aliasNameGenerator(db.academicAssessments.subjectId, db.subjects.id),
+      );
+
+  $$SubjectsTableProcessedTableManager get subjectId {
+    final $_column = $_itemColumn<String>('subject_id')!;
+
+    final manager = $$SubjectsTableTableManager(
+      $_db,
+      $_db.subjects,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_subjectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$AcademicAssessmentsTableFilterComposer
+    extends Composer<_$AppDatabase, $AcademicAssessmentsTable> {
+  $$AcademicAssessmentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get grade => $composableBuilder(
+    column: $table.grade,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get weightPercent => $composableBuilder(
+    column: $table.weightPercent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SubjectsTableFilterComposer get subjectId {
+    final $$SubjectsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableFilterComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AcademicAssessmentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AcademicAssessmentsTable> {
+  $$AcademicAssessmentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get grade => $composableBuilder(
+    column: $table.grade,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get weightPercent => $composableBuilder(
+    column: $table.weightPercent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SubjectsTableOrderingComposer get subjectId {
+    final $$SubjectsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableOrderingComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AcademicAssessmentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AcademicAssessmentsTable> {
+  $$AcademicAssessmentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<double> get grade =>
+      $composableBuilder(column: $table.grade, builder: (column) => column);
+
+  GeneratedColumn<double> get weightPercent => $composableBuilder(
+    column: $table.weightPercent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  $$SubjectsTableAnnotationComposer get subjectId {
+    final $$SubjectsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AcademicAssessmentsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AcademicAssessmentsTable,
+          GradeAssessmentRow,
+          $$AcademicAssessmentsTableFilterComposer,
+          $$AcademicAssessmentsTableOrderingComposer,
+          $$AcademicAssessmentsTableAnnotationComposer,
+          $$AcademicAssessmentsTableCreateCompanionBuilder,
+          $$AcademicAssessmentsTableUpdateCompanionBuilder,
+          (GradeAssessmentRow, $$AcademicAssessmentsTableReferences),
+          GradeAssessmentRow,
+          PrefetchHooks Function({bool subjectId})
+        > {
+  $$AcademicAssessmentsTableTableManager(
+    _$AppDatabase db,
+    $AcademicAssessmentsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AcademicAssessmentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AcademicAssessmentsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$AcademicAssessmentsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> subjectId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<double> grade = const Value.absent(),
+                Value<double> weightPercent = const Value.absent(),
+                Value<DateTime?> date = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+              }) => AcademicAssessmentsCompanion(
+                id: id,
+                subjectId: subjectId,
+                title: title,
+                grade: grade,
+                weightPercent: weightPercent,
+                date: date,
+                notes: notes,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String subjectId,
+                required String title,
+                required double grade,
+                required double weightPercent,
+                Value<DateTime?> date = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+              }) => AcademicAssessmentsCompanion.insert(
+                id: id,
+                subjectId: subjectId,
+                title: title,
+                grade: grade,
+                weightPercent: weightPercent,
+                date: date,
+                notes: notes,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$AcademicAssessmentsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({subjectId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (subjectId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.subjectId,
+                                referencedTable:
+                                    $$AcademicAssessmentsTableReferences
+                                        ._subjectIdTable(db),
+                                referencedColumn:
+                                    $$AcademicAssessmentsTableReferences
+                                        ._subjectIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$AcademicAssessmentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AcademicAssessmentsTable,
+      GradeAssessmentRow,
+      $$AcademicAssessmentsTableFilterComposer,
+      $$AcademicAssessmentsTableOrderingComposer,
+      $$AcademicAssessmentsTableAnnotationComposer,
+      $$AcademicAssessmentsTableCreateCompanionBuilder,
+      $$AcademicAssessmentsTableUpdateCompanionBuilder,
+      (GradeAssessmentRow, $$AcademicAssessmentsTableReferences),
+      GradeAssessmentRow,
+      PrefetchHooks Function({bool subjectId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8584,6 +9718,8 @@ class $AppDatabaseManager {
       $$ExpensesTableTableManager(_db, _db.expenses);
   $$AcademicNotesTableTableManager get academicNotes =>
       $$AcademicNotesTableTableManager(_db, _db.academicNotes);
+  $$AcademicAssessmentsTableTableManager get academicAssessments =>
+      $$AcademicAssessmentsTableTableManager(_db, _db.academicAssessments);
 }
 
 mixin _$SubjectsDaoMixin on DatabaseAccessor<AppDatabase> {
@@ -8717,4 +9853,23 @@ class NotesDaoManager {
       $$SubjectsTableTableManager(_db.attachedDatabase, _db.subjects);
   $$AcademicNotesTableTableManager get academicNotes =>
       $$AcademicNotesTableTableManager(_db.attachedDatabase, _db.academicNotes);
+}
+
+mixin _$GradeAssessmentsDaoMixin on DatabaseAccessor<AppDatabase> {
+  $SubjectsTable get subjects => attachedDatabase.subjects;
+  $AcademicAssessmentsTable get academicAssessments =>
+      attachedDatabase.academicAssessments;
+  GradeAssessmentsDaoManager get managers => GradeAssessmentsDaoManager(this);
+}
+
+class GradeAssessmentsDaoManager {
+  final _$GradeAssessmentsDaoMixin _db;
+  GradeAssessmentsDaoManager(this._db);
+  $$SubjectsTableTableManager get subjects =>
+      $$SubjectsTableTableManager(_db.attachedDatabase, _db.subjects);
+  $$AcademicAssessmentsTableTableManager get academicAssessments =>
+      $$AcademicAssessmentsTableTableManager(
+        _db.attachedDatabase,
+        _db.academicAssessments,
+      );
 }
